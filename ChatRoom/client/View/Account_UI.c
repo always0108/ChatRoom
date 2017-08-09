@@ -173,8 +173,6 @@ int Account_UI_Add() {
 int Account_UI_Modify(account_list_t list ,char usrName[]) 
 {
 	return 1;
-
-	
 }
 
 

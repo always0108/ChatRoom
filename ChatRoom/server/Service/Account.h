@@ -34,10 +34,6 @@ int Account_Srv_Add(const account_t *data);
 
 int Account_Srv_Modify(const account_t *data);
 
-int Account_Srv_DeleteByID(int usrID);
-
-int Account_Srv_FetchByID(int usrID, account_t *buf);
-
 int Account_Srv_FetchByName(char usrName[], account_t *buf);
 
 int Account_Srv_FetchAll(account_list_t list);

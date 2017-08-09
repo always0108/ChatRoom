@@ -18,7 +18,6 @@
 #include"./Common/list.h"
 #include "./Service/Account.h"
 #include "./Common/common.h"
-#include "./Service/EntityKey.h"
 
 #define SERV_PORT 4507 //服务器端的端口
 #define LISTENQ  12   //连接请求队列的最大长度
@@ -86,19 +85,8 @@ void send_data(int conn_fd,const char *string)
 int ready(void)
 {
     int optval;
-    int flag;
-    int ret;
-    int sock_fd,conn_fd;
-    pid_t pid;
-    socklen_t cli_len; 
+    int sock_fd;
     struct sockaddr_in cli_addr,serv_addr;   
-    char recv_buf[BUFSIZE];
-    struct s_info ts[200];
-    
-    pthread_attr_t a;  //线程属性变量
-    pthread_attr_init(&a);  //初始化线程属性
-    pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);      //设置线程属性
-
 
     //创建一个套接字
     sock_fd = socket(AF_INET,SOCK_STREAM,0);
@@ -174,7 +162,6 @@ void sign_up(account_t user,int conn_fd)
 {
     printf("%s\n",user.username);
     printf("%s\n",user.password);
-    printf("%d\n",user.type);
     account_list_t head;
 	List_Init(head, account_node_t);
 	Account_Srv_FetchAll(head);
@@ -185,7 +172,7 @@ void sign_up(account_t user,int conn_fd)
     }         
 	else {
 	//获取主键
-		user.id = EntKey_Srv_CompNewKey("Account");
+		//user.id = EntKey_Srv_CompNewKey("Account");
 		if (Account_Srv_Add(&user)){  
 		printf("\t\t\t这个新用户添加成功!\n");		
         send_data(conn_fd,"y\n");

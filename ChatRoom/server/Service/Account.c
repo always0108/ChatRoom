@@ -1,5 +1,4 @@
 #include "Account.h"
-#include "EntityKey.h"
 #include "../Common/list.h"
 #include "../Persistence/Account_Persist.h"
 #include <string.h>
@@ -42,16 +41,6 @@ int Account_Srv_Add(const account_t *data){
 //修改一个用户账号，通过调用Account_Perst_Update(data)函数实现
 int Account_Srv_Modify(const account_t *data){
 	return Account_Perst_Update(data);
-}
-
-//删除一个用户账号，通过调用Account_Perst_DeleteByID(usrID)函数实现
-int Account_Srv_DeleteByID(int usrID){
-	return Account_Perst_DeleteByID(usrID);
-}
-
-//提取usrID对应的用户账号信息，通过调用Account_Perst_SelectByID(usrID, buf)函数实现
-int Account_Srv_FetchByID(int usrID, account_t *buf){
-	return Account_Perst_SelectByID(usrID,buf);
 }
 
 //提取usrName对应的用户账号信息，通过调用Account_Perst_SelByName(usrName, buf)函数实现
