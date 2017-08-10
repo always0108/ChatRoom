@@ -14,18 +14,11 @@
 
 extern account_t gl_CurUser;
 
+data_t data_buf;
 char send_buf[1024];
 char recv_buf[1024];
 int ret;
-account_t usr;
 int conn_fd;
-
-void send_data(int conn_fd,const char *string)
-{
-    if(send(conn_fd,string,strlen(string),0)<0){
-        my_err("send",__LINE__);
-    }
-}
 
 //输入密码回显'*'
 //用法：将需要被赋值的字符数组作为参数传入函数
@@ -58,10 +51,10 @@ int GetPassword(char password[])
 }
 
 //登录函数，提示用户输入用户名和密码，登录成功return 1，否则提示重新登录，超过3次，登录失败
-int SysLogin(int connfd) {
-	int i=0,j;
-	data_t data_buf;
-	char send_buf[1024];
+int SysLogin(int connfd) 
+{
+	int i=0;
+	//char send_buf[1024];
 	char recv_buf[1024];
 	int ret;
 	conn_fd=connfd;
@@ -78,13 +71,14 @@ int SysLogin(int connfd) {
         switch(choice){
             case '1':
                 for (i = 0; i < 3; i++) {
+					memset(&data_buf,0,sizeof(data_t));
 		            printf("\n\n\t\t\t******** 请输入你的用户名: ");
-		            gets(usr.username);
+		            gets(data_buf.user.username);
 		            printf("\n\t\t\t******** 请输入你的密码: ");
-		            GetPassword(usr.password);
-					usr.type=1;
-					memcpy(send_buf,&usr,sizeof(account_t));
-					if(send(conn_fd,send_buf,sizeof(account_t),0) < 0){
+		            GetPassword(data_buf.user.password);
+					data_buf.type=1;
+					//memcpy(send_buf,&data_buf,sizeof(data_t));
+					if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
                         my_err("send",__LINE__);
         			}
 					//读取欢迎信息并打印出来
@@ -107,52 +101,54 @@ int SysLogin(int connfd) {
         }
     choice = getche();
     }while(choice != '3');
-    if(choice == '3')
-        return 2;
+    return 2;
 }
 
 //添加一个用户账号信息，如果账号名存在，提示出错信息
 int Account_UI_Add() {
-	account_t usr;
 	int l;
     char passwd[30];
     system("clear");
 	printf("\n\t\t\t=======================================================\n");
 	printf("\t\t\t****************  添加一个新用户  ****************\n");
 	printf("\t\t\t-------------------------------------------------------\n");
+	memset(&data_buf,0,sizeof(data_t));
 	printf("\t\t\t请输入新的用户名:");
-	gets(usr.username);
+	gets(data_buf.user.username);
 	printf("\t\t\t请输入新的密码:");
-	GetPassword(usr.password);
-	l = strlen(usr.password);
+	GetPassword(data_buf.user.password);
+	l = strlen(data_buf.user.password);
 	while (l < 6)
 	{
 		printf("\n\t\t\t密码不足6位,请重新输入!\n");
 		printf("\n\t\t\t请输入新的密码:");
-		GetPassword(usr.password);
-		l = strlen(usr.password);
+		GetPassword(data_buf.user.password);
+		l = strlen(data_buf.user.password);
 	}
 	printf("\n\t\t\t请再次输入上面的密码:");
 	GetPassword(passwd);
-	while (strcmp(usr.password, passwd) != 0)
+	while (strcmp(data_buf.user.password, passwd) != 0)
 	{
 		printf("\n\t\t\t两次密码不一致，请重新输入！\n");
 		printf("\n\t\t\t请输入新的密码:");
-		GetPassword(usr.password);
-		l = strlen(usr.password);
+		GetPassword(data_buf.user.password);
+		l = strlen(data_buf.user.password);
 		while (l < 6)
 		{
 			printf("\n\t\t\t密码不足6位,请重新输入!\n");
 			printf("\n\t\t\t请输入新的密码:");
-			GetPassword(usr.password);
-			l = strlen(usr.password);
+			GetPassword(data_buf.user.password);
+			l = strlen(data_buf.user.password);
 		}
 		printf("\n\t\t\t请再次输入上面的密码:");
 		GetPassword(passwd);
 	}
-	usr.type=2;
-	memcpy(send_buf,&usr,sizeof(account_t));
-	if(send(conn_fd,send_buf,sizeof(account_t),0) < 0){
+	printf("\n\t\t\t请输入用户类型(0表示普通用户，1表示vip)：");
+	int temp;
+	scanf("%d",&temp);
+	data_buf.user.type=temp;
+	data_buf.type=2;
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
         my_err("send",__LINE__);
     }
 	if((ret = my_recv(conn_fd,recv_buf,sizeof(recv_buf))) < 0){
@@ -170,7 +166,7 @@ int Account_UI_Add() {
 }
 	
 //根据用户账号名修改用户账号密码，不存在这个用户账号名，提示出错信息
-int Account_UI_Modify(account_list_t list ,char usrName[]) 
+int Account_UI_Modify() 
 {
 	return 1;
 }

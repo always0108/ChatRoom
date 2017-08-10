@@ -11,15 +11,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef struct
-{
-	int totalRecords;
-	int offset;
-	int pageSize;
-	void *curPos;
-}Pagination_t;
-
-
 //链表为双向循环链表，链表结点必须包含next, prev两个指针域
 /*list 为链表头指针*/
 #define List_Init(list, list_node_t) {					\
@@ -104,67 +95,5 @@ typedef struct
 		  	  	  curPos != list;       \
 		  	  	  curPos=curPos->next	\
 	    )
-
-#define List_Paging(list,paging, list_node_t) {			\
-		if(paging.offset+paging.pageSize>=paging.totalRecords){	\
-			Paging_Locate_LastPage(list, paging, list_node_t);	}	\
-		else {													\
-			int i;	\
-			list_node_t * pos=(list)->next;							\
-			for( i=0; i<paging.offset && pos!=list ; i++) 		\
-			   pos=pos->next;		 							\
-			paging.curPos=(void*)pos;							\
-		}														\
-	}
-
-
-#define Paging_Locate_FirstPage(list, paging) { \
-		paging.offset=0;						\
-		paging.curPos=(void *)((list)->next);	\
-	}
-
-#define Paging_Locate_LastPage(list, paging, list_node_t) {	\
-	int i=paging.totalRecords % paging.pageSize;	\
-	if (0==i && paging.totalRecords>0)				\
-		i=paging.pageSize;							\
-	paging.offset=paging.totalRecords-i;			\
-	list_node_t * pos=(list)->prev;					\
-	for(;i>1;i--)									\
-		pos=pos->prev;								\
-	paging.curPos=(void*)pos;						\
-													\
-}
-
-#define Paging_Locate_OffsetPage(list, paging, offsetPage, list_node_t) {\
-	int offset=offsetPage*paging.pageSize;	\
-	list_node_t *pos=(list_node_t *)paging.curPos;	\
-	int i;									\
-	if(offset>0){							\
-		if( paging.offset + offset >= paging.totalRecords )	{\
-			Paging_Locate_LastPage(list, paging, list_node_t);	\
-		}else {												\
-			for(i=0; i<offset; i++ )						\
-				pos=pos->next;								\
-			paging.offset += offset;						\
-			paging.curPos= (void *)pos;						\
-		}													\
-	}else{													\
-		if( paging.offset + offset <= 0 ){					\
-			Paging_Locate_FirstPage(list, paging);			\
-		}else {												\
-			for(i=offset; i<0; i++ )						\
-				pos	= pos->prev;							\
-			paging.offset += offset;						\
-			paging.curPos= pos;								\
-		}													\
-	}														\
-}
-
-#define Pageing_CurPage(paging) 	(0==(paging).totalRecords?0:1+(paging).offset/(paging).pageSize)
-
-#define Pageing_TotalPages(paging) 	(((paging).totalRecords%(paging).pageSize==0)?\
-	(paging).totalRecords/(paging).pageSize:\
-	(paging).totalRecords/(paging).pageSize+1)
-
 
 #endif /* LIST_H_ */

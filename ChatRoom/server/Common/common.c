@@ -18,6 +18,13 @@ void my_err(const char * err_string,int line)
     exit(1);
 }
 
+//发送数据
+void send_data(int conn_fd,const char *string)
+{
+    if(send(conn_fd,string,strlen(string),0)<0){
+        my_err("send",__LINE__);
+    }
+}
 /*
  * 函数名：my_recv
  * 描述：从套接字上读取一次数据（以'\n'为结束标致）

@@ -24,17 +24,21 @@
 #define INVALID_USERINFO 'n' //用户信息无效
 #define VALID_USERINFO 'y' //用户信息有效
 
-void send_data(int conn_fd,const char *string);
-int find_name(const char *name);
-int ready(void);
-void accept_in(int sock_fd);
-void sign_in(account_t user,int conn_fd);
-void sign_up(account_t user,int conn_fd);
+int ready(void);//服务器初始化
+void accept_in(int sock_fd);//服务器开始监听
+void sign_in(data_t data_buf,int conn_fd);//登录 1
+void sign_up(data_t data_buf,int conn_fd);//注册 2
+void send_all(data_t data_buf,int conn_fd);//群聊 3
+void send_privacy(data_t data_buf,int conn_fd);//私聊 4
+
 //定义全局变量，用于存储登陆用户信息
-account_t gl_CurUser = { 0, USR_ANOMY, "Anonymous","" };
-account_t user;
-char recv_buf[BUFSIZE];
+account_t gl_CurUser = { 0, 0, "Anonymous","" };
+online_list_t list;
+int listcount = 0;
+char recv_buf[1024];
 int ret;
+//pthread_mutex_t mutex;
+//pthread_cond_t cond;
 
 struct s_info{
     struct sockaddr_in cliaddr;
@@ -51,33 +55,43 @@ void *thread(void *arg)
     pthread_detach(pthread_self());
 
     while(1){
-        if((ret = recv(conn_fd,&recv_buf,sizeof(recv_buf),0))<0){
+        memset(&data_buf,0,sizeof(data_t));
+        if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
             printf("%d退出连接\n",conn_fd);            
 		    close(conn_fd);
+            online_node_t *pos;
+            if(listcount>0)
+                List_ForEach(list,pos)
+                {
+                    if(pos->data.conn_fd==conn_fd)
+                    {   List_FreeNode(pos);
+                        listcount--;
+                        break;
+                    }
+                }
+            /*online_node_t *pos1;
+            List_ForEach(list,pos1)
+                printf("%s\n",pos1->data.username);*/
 		    pthread_exit(0);
-        }else
-        {
-            memcpy(&user,recv_buf,sizeof(account_t));       
-            switch(user.type)
+        }else{
+            switch(data_buf.type)
             {
             case 1:
-                    sign_in(user,conn_fd);
-                        break;
+                    sign_in(data_buf,conn_fd);
+                    break;
             case 2:
-                    sign_up(user,conn_fd);
-                        break;
+                    sign_up(data_buf,conn_fd);
+                    break;
+            case 3:
+                    send_all(data_buf,conn_fd);
+                    break;
+            case 4: 
+                    send_privacy(data_buf,conn_fd);
+                    break;
             }
         }   
-    }
-}
-
-//发送数据
-void send_data(int conn_fd,const char *string)
-{
-    if(send(conn_fd,string,strlen(string),0)<0){
-        my_err("send",__LINE__);
     }
 }
 
@@ -86,7 +100,7 @@ int ready(void)
 {
     int optval;
     int sock_fd;
-    struct sockaddr_in cli_addr,serv_addr;   
+    struct sockaddr_in serv_addr;   
 
     //创建一个套接字
     sock_fd = socket(AF_INET,SOCK_STREAM,0);
@@ -125,7 +139,7 @@ void accept_in(int sock_fd)
 {
     int conn_fd;
     socklen_t cli_len;
-    struct sockaddr_in cli_addr,serv_addr;
+    struct sockaddr_in cli_addr;
     cli_len = sizeof(struct sockaddr_in);
     while(1){
         //用accept接收客户端的请求，并返回连接套接字的用于收发数据
@@ -133,7 +147,7 @@ void accept_in(int sock_fd)
         if(conn_fd < 0){
             my_err("accept",__LINE__);
         }
-        printf("accept a new client,ip is %s ,conn_fd is %d\n",inet_ntoa(cli_addr.sin_addr),conn_fd);
+        printf("accept a new client ,conn_fd is %d\n",conn_fd);
         pthread_t thid;
 
         ts.cliaddr = cli_addr;
@@ -144,47 +158,110 @@ void accept_in(int sock_fd)
 }
 
 
-void sign_in(account_t user,int conn_fd)
+void sign_in(data_t data_buf,int conn_fd)
 {
     while(1){
-            printf("%s\n",user.username);
-            printf("%s\n",user.password);
-            if (Account_Srv_Verify(user.username,user.password))
+            if (Account_Srv_Verify(data_buf.user.username,data_buf.user.password))
             {
 			    send_data(conn_fd,"y\n");
-			    break;
+                
+                online_node_t *pos;
+                pos = (online_node_t*)malloc(sizeof(online_node_t));
+                memset(pos,0,sizeof(online_node_t));
+                strcpy(pos->data.username,data_buf.user.username);
+                pos->data.username[strlen(data_buf.user.username)]='\0';
+                pos->data.conn_fd=conn_fd;
+                printf("%s\n",pos->data.username);
+                printf("%d\n",pos->data.conn_fd);
+                List_AddTail(list,pos);
+                listcount++;
 		    }
 		    send_data(conn_fd,"n\n");
+            break;
             }
 }
 
-void sign_up(account_t user,int conn_fd)
+void sign_up(data_t data_buf,int conn_fd)
 {
-    printf("%s\n",user.username);
-    printf("%s\n",user.password);
     account_list_t head;
 	List_Init(head, account_node_t);
 	Account_Srv_FetchAll(head);
-    if (NULL!=Account_Srv_FindByUsrName(head, user.username))
+    if (NULL!=Account_Srv_FindByUsrName(head,data_buf.user.username))
 	{
-        printf("\t\t\t该用户已经存在!!!\n");
+        printf("该用户已经存在!!!\n");
         send_data(conn_fd,"n\n");
     }         
 	else {
-	//获取主键
-		//user.id = EntKey_Srv_CompNewKey("Account");
-		if (Account_Srv_Add(&user)){  
-		printf("\t\t\t这个新用户添加成功!\n");		
+		if (Account_Srv_Add(&data_buf.user)){  
+		printf("这个新用户添加成功!\n");		
         send_data(conn_fd,"y\n");
         }
         else{
-			printf("\t\t\t这个新用户添加失败!\n");
+			printf("这个新用户添加失败!\n");
             send_data(conn_fd,"n\n");}
 	    }
 }
 
+void send_all(data_t data_buf,int conn_fd)
+{
+    online_node_t *pos;
+    List_ForEach(list,pos)
+    {
+        if(pos->data.conn_fd == conn_fd)
+        {   strcpy(data_buf.user.username,pos->data.username);
+            data_buf.user.username[strlen(data_buf.user.username)]='\0';
+            break;
+        }
+    }
+    List_ForEach(list,pos)
+    {   
+        if(pos->data.conn_fd != conn_fd)
+        {   if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        		my_err("send",__LINE__);
+    	    }    
+        }
+    }
+    strcpy(data_buf.temp_buf,"send sucess");
+    data_buf.temp_buf[strlen(data_buf.temp_buf)]='\0';
+    data_buf.type=0;
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        my_err("send",__LINE__);}
+    return ;
+}
+
+void send_privacy(data_t data_buf,int conn_fd)
+{
+    online_node_t *pos;
+    List_ForEach(list,pos)
+    {
+        if(pos->data.conn_fd == conn_fd)
+        {   strcpy(data_buf.user.username,pos->data.username);
+            data_buf.user.username[strlen(data_buf.user.username)]='\0';
+            break ;
+        }
+    }
+    pos = NULL;
+    List_ForEach(list,pos)//数据不全,丢失? ? ? ? ? ? ?（解决）
+    {   
+        if(strcmp(pos->data.username,data_buf.name_to)==0)
+        {   if(pos->data.conn_fd == conn_fd)
+                continue ;    
+            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        		my_err("send",__LINE__);
+            } 
+        }//要遍历完，不能加break。。。
+    }
+    strcpy(data_buf.temp_buf,"send sucess");
+    data_buf.temp_buf[strlen(data_buf.temp_buf)]='\0';
+    data_buf.type=0;
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        my_err("send",__LINE__);}
+    return ;
+}
+
 int main(void)
 {
+	List_Init(list, online_node_t);
     int sock_fd=ready();
     accept_in(sock_fd);
     return 0;

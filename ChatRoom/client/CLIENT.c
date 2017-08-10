@@ -15,7 +15,6 @@
 #include<netinet/in.h>
 #include<arpa/inet.h>
 #include <sys/io.h>
-#include "./Common/EntityKey.h"
 #include "./View/Main_Menu.h"
 #include "./View/Account_UI.h"
 #include"./Common/common.h"
@@ -25,16 +24,14 @@
 #define VALID_USRINFO     'y'  //用户信息有效
 
 //定义全局变量，用于存储登陆用户信息
-account_t gl_CurUser = { 0, USR_ANOMY, "Anonymous","" };
+account_t gl_CurUser = { 0, 0, "Anonymous","" };
 
 int main(int argc , char ** argv)
 {
     int i;
-    int ret;
     int conn_fd;
     int serv_port;
     struct sockaddr_in  serv_addr;
-    char recv_buf[BUFSIZE];
 
     //检查参数个数
     if(argc != 5){
@@ -89,16 +86,16 @@ int main(int argc , char ** argv)
 	if (!flag) {
 		printf("\n\t\t\t对不起您无权登录本系统请按任意键退出......\n");
 		getchar();
-        
+        close(conn_fd);
 		return EXIT_SUCCESS;
 	}
     if(flag==2){
         printf("\t\t\t再见!!!\n");
-        
+        close(conn_fd);
         return EXIT_SUCCESS;
     }
-	Main_Menu(gl_CurUser);
+	Main_Menu(conn_fd);
 	printf("\t\t\t再见!!!\n");
-    
+    close(conn_fd);
 	return EXIT_SUCCESS;
 }
