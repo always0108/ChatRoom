@@ -17,6 +17,16 @@ void my_err(const char * err_string,int line)
     perror(err_string);
     exit(1);
 }
+//向客户端返回结果
+void send_note(int conn_fd,const char *string)
+{
+	data_t data_buf ;	
+	strcpy(data_buf.temp_buf,string);
+    data_buf.temp_buf[strlen(string)]='\0';
+    data_buf.type=0;
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        my_err("send",__LINE__);}
+}
 
 //发送数据
 void send_data(int conn_fd,const char *string)

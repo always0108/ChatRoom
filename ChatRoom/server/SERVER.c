@@ -26,10 +26,13 @@
 
 int ready(void);//服务器初始化
 void accept_in(int sock_fd);//服务器开始监听
+void send_judge_to_oneself(data_t data_buf,int conn_fd);//将客户端的输入调给其自己使用-1
 void sign_in(data_t data_buf,int conn_fd);//登录 1
 void sign_up(data_t data_buf,int conn_fd);//注册 2
 void send_all(data_t data_buf,int conn_fd);//群聊 3
 void send_privacy(data_t data_buf,int conn_fd);//私聊 4
+void upload_file(data_t data_buf,int conn_fd);//上传文件5
+void send_online_file(data_t data_buf,int conn_fd);//在线传输文件6
 
 //定义全局变量，用于存储登陆用户信息
 account_t gl_CurUser = { 0, 0, "Anonymous","" };
@@ -78,6 +81,9 @@ void *thread(void *arg)
         }else{
             switch(data_buf.type)
             {
+            case -1:
+                    send_judge_to_oneself(data_buf,conn_fd);
+                    break;
             case 1:
                     sign_in(data_buf,conn_fd);
                     break;
@@ -89,6 +95,12 @@ void *thread(void *arg)
                     break;
             case 4: 
                     send_privacy(data_buf,conn_fd);
+                    break;
+            case 5: 
+                    upload_file(data_buf,conn_fd);
+                    break;
+            case 6:
+                    send_online_file(data_buf,conn_fd);
                     break;
             }
         }   
@@ -157,28 +169,44 @@ void accept_in(int sock_fd)
     }
 }
 
+void send_judge_to_oneself(data_t data_buf,int conn_fd)
+{
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+    	my_err("send",__LINE__);
+    }
+}
+
 
 void sign_in(data_t data_buf,int conn_fd)
 {
-    while(1){
-            if (Account_Srv_Verify(data_buf.user.username,data_buf.user.password))
-            {
-			    send_data(conn_fd,"y\n");
-                
-                online_node_t *pos;
-                pos = (online_node_t*)malloc(sizeof(online_node_t));
-                memset(pos,0,sizeof(online_node_t));
-                strcpy(pos->data.username,data_buf.user.username);
-                pos->data.username[strlen(data_buf.user.username)]='\0';
-                pos->data.conn_fd=conn_fd;
-                printf("%s\n",pos->data.username);
-                printf("%d\n",pos->data.conn_fd);
-                List_AddTail(list,pos);
-                listcount++;
-		    }
-		    send_data(conn_fd,"n\n");
-            break;
+    if (Account_Srv_Verify(data_buf.user.username,data_buf.user.password))
+    {
+        online_node_t *pos;
+        int flag = 0;
+	    List_ForEach(list,pos){
+            if(strcmp(pos->data.username,data_buf.user.username)==0){
+                flag = 1;
+                send_data(conn_fd,"nThis account has been logining in\n");
+                break ;
             }
+        }
+        if(!flag){
+            send_data(conn_fd,"y\n");
+                
+            pos = (online_node_t*)malloc(sizeof(online_node_t));
+            memset(pos,0,sizeof(online_node_t));
+            strcpy(pos->data.username,data_buf.user.username);
+            pos->data.username[strlen(data_buf.user.username)]='\0';
+            pos->data.conn_fd=conn_fd;
+            printf("%s\n",pos->data.username);
+            printf("%d\n",pos->data.conn_fd);
+            List_AddTail(list,pos);
+            listcount++;
+            return ;
+		}
+    }else
+		send_data(conn_fd,"nIdentification Fail\n");
+
 }
 
 void sign_up(data_t data_buf,int conn_fd)
@@ -189,16 +217,16 @@ void sign_up(data_t data_buf,int conn_fd)
     if (NULL!=Account_Srv_FindByUsrName(head,data_buf.user.username))
 	{
         printf("该用户已经存在!!!\n");
-        send_data(conn_fd,"n\n");
+        send_data(conn_fd,"nThis name had been occupied\n");
     }         
 	else {
 		if (Account_Srv_Add(&data_buf.user)){  
 		printf("这个新用户添加成功!\n");		
-        send_data(conn_fd,"y\n");
+        send_data(conn_fd,"y!\n");
         }
         else{
 			printf("这个新用户添加失败!\n");
-            send_data(conn_fd,"n\n");}
+            send_data(conn_fd,"nAdd fail\n");}
 	    }
 }
 
@@ -217,20 +245,18 @@ void send_all(data_t data_buf,int conn_fd)
     {   
         if(pos->data.conn_fd != conn_fd)
         {   if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-        		my_err("send",__LINE__);
+        		send_note(conn_fd,"send fail");
+                my_err("send",__LINE__);
     	    }    
         }
     }
-    strcpy(data_buf.temp_buf,"send sucess");
-    data_buf.temp_buf[strlen(data_buf.temp_buf)]='\0';
-    data_buf.type=0;
-    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-        my_err("send",__LINE__);}
+    send_note(conn_fd,"send sucess");
     return ;
 }
 
 void send_privacy(data_t data_buf,int conn_fd)
 {
+    int flag = 0;
     online_node_t *pos;
     List_ForEach(list,pos)
     {
@@ -245,19 +271,75 @@ void send_privacy(data_t data_buf,int conn_fd)
     {   
         if(strcmp(pos->data.username,data_buf.name_to)==0)
         {   if(pos->data.conn_fd == conn_fd)
-                continue ;    
+            {
+                send_note(conn_fd,"you can't send to yourself");
+                continue ;
+            }    
             if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
-            } 
+            }
+            flag = 1; 
         }//要遍历完，不能加break。。。
     }
-    strcpy(data_buf.temp_buf,"send sucess");
-    data_buf.temp_buf[strlen(data_buf.temp_buf)]='\0';
-    data_buf.type=0;
-    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-        my_err("send",__LINE__);}
-    return ;
+    if(flag)
+        send_note(conn_fd,"send sucess");
+    else
+        send_note(conn_fd,"send fail");
 }
+
+void upload_file(data_t data_buf,int conn_fd)
+{
+    FILE *fp;
+    fp = fopen(data_buf.filename,"ab+");
+    int l;
+    if(NULL == fp)  
+    {  
+        printf("File:\t%s Can Not Open To Write\n",data_buf.filename);  
+        exit(1);  
+    }
+    else{
+        l=strlen(data_buf.temp_buf);
+        fwrite(data_buf.temp_buf,sizeof(char),l,fp);//注意缓冲区内如果没有用完可能有很多空子符
+        fclose(fp);
+    }
+}
+
+void send_online_file(data_t data_buf,int conn_fd)
+{
+    int flag = 0;
+    online_node_t *pos;
+    List_ForEach(list,pos)
+    {
+        if(pos->data.conn_fd == conn_fd)
+        {   strcpy(data_buf.user.username,pos->data.username);
+            data_buf.user.username[strlen(data_buf.user.username)]='\0';
+            break ;
+        }
+    }
+    pos = NULL;
+    List_ForEach(list,pos)
+    {   
+        if(strcmp(pos->data.username,data_buf.name_to)==0)
+        {   if(pos->data.conn_fd == conn_fd)
+            {
+                send_note(conn_fd,"you can't send to yourself");
+                continue ;
+            }    
+            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+        		my_err("send",__LINE__);
+            }
+            flag = 1; 
+        }//要遍历完，不能加break。。。
+    }
+    if(flag)
+        send_note(conn_fd,"send sucess");
+    else
+        send_note(conn_fd,"send fail");
+
+}
+
 
 int main(void)
 {

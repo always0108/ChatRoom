@@ -25,6 +25,7 @@ typedef struct{
 	int type;//要做什么
 	account_t user;
 	char name_to[30];
+	char filename[30];
 	char temp_buf[BUFSIZE];
 }data_t;
 

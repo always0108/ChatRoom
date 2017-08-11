@@ -6,9 +6,6 @@
 #include "../Service/Account.h"
 
 #define BUFSIZE 512
-void my_err(const char * err_string,int line);
-int my_recv(int conn_fd,char *data_buf,int len);
-void send_data(int conn_fd,const char *string);
 
 typedef struct {
 	int year;
@@ -26,9 +23,17 @@ typedef struct{
 	int type;//要做什么
 	account_t user;
 	char name_to[30];
+	char filename[30];
 	char temp_buf[BUFSIZE];
 }data_t;
 
+void my_err(const char * err_string,int line);
+
+int my_recv(int conn_fd,char *data_buf,int len);
+
+void send_data(int conn_fd,const char *string);
+//向客户端返回结果
+void send_note(int conn_fd,const char *string);
 
 //直接读取键盘输入值
 int ScanKeyboard();

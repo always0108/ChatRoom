@@ -70,7 +70,13 @@ int SysLogin(int connfd)
         printf("\n\n\t\t\t请输入你的选择：");    
         switch(choice){
             case '1':
+				system("clear");
+	    		printf("\t\t\t==================================================================\n");
+	    		printf("\t\t\t    ****************    欢迎来到迷你聊天室   *****************\n\n");
+				printf("\t\t\t        ****************     请登录   *****************\n");
+	    		printf("\t\t\t==================================================================\n");
                 for (i = 0; i < 3; i++) {
+					
 					memset(&data_buf,0,sizeof(data_t));
 		            printf("\n\n\t\t\t******** 请输入你的用户名: ");
 		            gets(data_buf.user.username);
@@ -82,16 +88,16 @@ int SysLogin(int connfd)
                         my_err("send",__LINE__);
         			}
 					//读取欢迎信息并打印出来
+					memset(recv_buf,0,sizeof(recv_buf));
         			if((ret = my_recv(conn_fd,recv_buf,sizeof(recv_buf))) < 0){
             			printf("data is too long\n");
             			exit(1);
         			}
 					if (recv_buf[0]=='y')
 			        {
-			            printf("\t\t\t欢迎");
 			            return 1;
 		            }
-		            printf("\t\t\t身份验证错误!!!\n");
+		            printf("\n\t\t\t%s\n",recv_buf+1);
 	            }
                 return 0;
                 break;
@@ -161,7 +167,7 @@ int Account_UI_Add() {
 		printf("sucess\n");
 		return 1;
 	}
-	printf("fail\n");
+	puts(recv_buf+1);
 	return 0;
 }
 	
