@@ -232,6 +232,12 @@ void sign_up(data_t data_buf,int conn_fd)
 
 void send_all(data_t data_buf,int conn_fd)
 {
+    data_t note_buf;
+    note_buf.type=0;
+    strcpy(note_buf.temp_buf,"\n\n\t\t\t有新的消息！\n");
+    note_buf.temp_buf[strlen(note_buf.temp_buf)]='\0';
+    
+
     online_node_t *pos;
     List_ForEach(list,pos)
     {
@@ -244,13 +250,22 @@ void send_all(data_t data_buf,int conn_fd)
     List_ForEach(list,pos)
     {   
         if(pos->data.conn_fd != conn_fd)
-        {   if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-        		send_note(conn_fd,"send fail");
+        {   
+            if(send(pos->data.conn_fd,&note_buf,sizeof(data_t),0) < 0){
+                my_err("send",__LINE__);
+            }
+            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                strcpy(note_buf.temp_buf,"\n\n\t\t\tsend fail！\n");
+                note_buf.temp_buf[strlen(note_buf.temp_buf)]='\0';
+                send(conn_fd,&note_buf,sizeof(data_t),0);
+                break;
                 my_err("send",__LINE__);
     	    }    
         }
     }
-    send_note(conn_fd,"send sucess");
+    strcpy(note_buf.temp_buf,"\n\n\t\t\tsend sucess！\n");
+    note_buf.temp_buf[strlen(note_buf.temp_buf)]='\0';
+    send(conn_fd,&note_buf,sizeof(data_t),0);
     return ;
 }
 

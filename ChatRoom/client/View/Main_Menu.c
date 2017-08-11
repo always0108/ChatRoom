@@ -11,66 +11,91 @@
 #include<arpa/inet.h>
 #include<pthread.h>
 
-int fd;
+pthread_mutex_t mutex;
+pthread_cond_t cond;
+
+int conn_fd;
 char ch;
+int flag=0;
 
 void *Main_Menu_accept(void)
 {
 	data_t data_buf;
-	//char recv_buf[1024];
 	int ret;
 	/*线程资源回收*/
     pthread_detach(pthread_self());
+	sleep(2);
 	while(1){
         memset(&data_buf,0,sizeof(data_t));
-        if((ret = recv(fd,&data_buf,sizeof(data_t),0))<0){
+        if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
-			send_data(fd,"n\n");
+			send_data(conn_fd,"n\n");
 			pthread_exit(0);
         }else
 		{
+			
+			char ch;
+			//system("clear");
+			//printf("\n新的消息！\n");
+			if(data_buf.type==0)
+			{
+				printf("\t\t\t%s\n",data_buf.temp_buf);
+			}
+			sleep(1);
+			pthread_mutex_lock(&mutex);
+			pthread_cond_wait(&cond,&mutex);
             switch(data_buf.type)
         	{
-				case 0:
-						printf("\t\t\t%s\n",data_buf.temp_buf);
-						break;
-        	    case 3:
-					
-						printf("\n新的消息！");
-				    	printf("\n\n\t\t\t%s发来消息:",data_buf.user.username);
-						printf("%s\n",data_buf.temp_buf);
+				//case 0:
+						//printf("\t\t\t%s\n",data_buf.temp_buf);
+						//break;
+        	    case 3:	
+						//printf("\n新的消息！\n");
+						//getchar();
+						system("clear");
+						printf("\n\t\t\t是否接收(y or n):\t");
+						ch = getchar();
+						getchar();
+						if(ch=='y')
+				    	{	printf("\n\n\t\t\t%s发来消息:",data_buf.user.username);
+							printf("%s\n",data_buf.temp_buf);
+						}
+						else
+							printf("\t\t\t你已忽略该消息\n");
 						break;
 				case 4: 
 					printf("\n\n\t\t\t%s私聊你:",data_buf.user.username);
 					printf("%s\n",data_buf.temp_buf);
 					break;
 				case 6:
-					recive_online_file(data_buf,fd); 
+					recive_online_file(data_buf,conn_fd); 
 					break;   
        	 	}
+			pthread_mutex_unlock(&mutex);
         }   
 	}
 }
 
-
-void Main_Menu(int conn_fd)
+void *Main_Menu_input(void)
 {
-	char choice;	
-	pthread_t thid;
-	fd=conn_fd;
-    pthread_create(&thid,NULL,(void*)Main_Menu_accept,NULL);
+	char choice;
+	/*线程资源回收*/
+    pthread_detach(pthread_self());
 	do {
-        //system("clear");
+		system("clear");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t**************** happy chatroom ****************\n");
 		printf("\t\t\t\t[1]群聊\n");
 		printf("\t\t\t\t[2]私聊\n");
 		printf("\t\t\t\t[3]上传文件到服务器\n");
 		printf("\t\t\t\t[4]在线传输文件\n");
-		printf("\t\t\t\t[0]退出\n");
+		printf("\t\t\t\t[5]刷新\n");
+		printf("\t\t\t\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond,&mutex);
 		choice = getche();
 		switch (choice) {
 			case '1':
@@ -85,8 +110,30 @@ void Main_Menu(int conn_fd)
 			case '4':
 					send_online_file(conn_fd);
 					break;
-			}
-		}while ('0' != choice);
+		}
+		pthread_mutex_unlock(&mutex);
+	}while ('q' != choice);
+	flag = 1;
+	pthread_exit(0);
+}
+
+
+void Main_Menu(int fd)
+{
+	conn_fd=fd;
+	pthread_t thid1,thid2;
+	pthread_mutex_init(&mutex,NULL);
+	pthread_cond_init(&cond,NULL);
+
+    pthread_create(&thid1,NULL,(void*)Main_Menu_input,NULL);
+	pthread_create(&thid2,NULL,(void*)Main_Menu_accept,NULL);
+	
+	do{
+		pthread_cond_signal(&cond);
+	}while(flag != 1);
+
+	pthread_mutex_destroy(&mutex);
+	pthread_cond_destroy(&cond);
 }
 
 

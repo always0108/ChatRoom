@@ -10,6 +10,8 @@ void Main_Menu(int conn_fd);
 //用户接收消息
 void * Main_Menu_accept(void);
 
+void * Main_Menu_input(void);
+
 //群聊
 void send_all(int conn_fd); 
 
