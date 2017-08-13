@@ -8,7 +8,7 @@
 void my_err(const char * err_string,int line);
 int my_recv(int conn_fd,char *data_buf,int len);
 void send_data(int conn_fd,const char *string);
-
+void send_note(int conn_fd,const char *string);
 typedef struct {
 	int year;
 	int month;

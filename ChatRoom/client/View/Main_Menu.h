@@ -27,6 +27,8 @@ void send_online_file(int conn_fd);
 //发送在线文件
 void recive_online_file(data_t data_buf,int conn_fd);
 
-//自己与自己通信
-void send_judge_to_oneself(char result,int conn_fd);
+void chat_to(data_t data_temp,int conn_fd,char *string);
+
+//添加好友
+void add_friend(int conn_fd);
 #endif /* MAIN_MENU_H_ */

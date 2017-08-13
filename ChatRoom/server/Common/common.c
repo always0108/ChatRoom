@@ -2,13 +2,14 @@
 
 #include<stdio.h>
 #include<fcntl.h>
-#include <time.h>
+#include<time.h>
 #include<string.h>
 #include<stdlib.h>
 #include<sys/types.h>
 #include<sys/socket.h>
-#include<errno.h>
-
+#include<unistd.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
 
 /*自定义错误处理函数*/
 void my_err(const char * err_string,int line)
@@ -17,7 +18,7 @@ void my_err(const char * err_string,int line)
     perror(err_string);
     exit(1);
 }
-//向客户端返回结果
+//发送消息
 void send_note(int conn_fd,const char *string)
 {
 	data_t data_buf ;	

@@ -2,7 +2,7 @@
 #define COMMON_H_
 
 
-#include <stdio.h>
+#include<stdio.h>
 #include "../Service/Account.h"
 
 #define BUFSIZE 512
@@ -34,6 +34,8 @@ int my_recv(int conn_fd,char *data_buf,int len);
 void send_data(int conn_fd,const char *string);
 //向客户端返回结果
 void send_note(int conn_fd,const char *string);
+
+void ask_client(int conn_fd,const char *string);
 
 //直接读取键盘输入值
 int ScanKeyboard();
