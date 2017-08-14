@@ -14,7 +14,9 @@
 #include<errno.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
-#include <sys/io.h>
+#include<sys/io.h>
+#include<dirent.h>
+#include<sys/stat.h>
 #include "./View/Main_Menu.h"
 #include "./View/Account_UI.h"
 #include"./Common/common.h"
@@ -28,6 +30,8 @@ account_t gl_CurUser = { 0, 0, "Anonymous","" };
 
 int main(int argc , char ** argv)
 {
+    if(NULL==opendir("USER.dat"))
+        mkdir("USER.dat",0777);
     int i;
     int conn_fd;
     int serv_port;

@@ -2,15 +2,18 @@
 #include "../Common/list.h"
 #include "../Common/common.h"
 #include "Account_UI.h"
+#include "../Common/conio.h"
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <sys/time.h>
-#include "../Common/conio.h"
-#include <unistd.h>
-#include<sys/types.h>
-#include<sys/socket.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+
 
 extern account_t gl_CurUser;
 
@@ -97,7 +100,11 @@ int SysLogin(int connfd)
 			        {
 						strcpy(gl_CurUser.username,data_buf.user.username);
 						gl_CurUser.username[strlen(gl_CurUser.username)]='\0';
-			            return 1;
+						chdir("USER.dat");
+						if(NULL==opendir(gl_CurUser.username))
+							mkdir(gl_CurUser.username,0777);
+						chdir(gl_CurUser.username);
+						return 1;
 		            }
 		            printf("\n\t\t\t%s\n",recv_buf+1);
 	            }
@@ -105,6 +112,7 @@ int SysLogin(int connfd)
                 break;
             case '2':
 				Account_UI_Add();
+				getchar();
 				break;
         }
     choice = getche();

@@ -10,6 +10,7 @@
 #include<stdlib.h>
 #include<sys/types.h>
 #include<sys/socket.h>
+#include<dirent.h>
 #include<unistd.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
@@ -18,6 +19,11 @@
 #include"action.h"
 #include <sys/io.h>
 
+//比较字符串
+int cmp(const void *a, const void *b)  
+{  
+     return *(char*)a - *(char*)b;  
+}   
 
 
 //群聊
@@ -106,8 +112,20 @@ void chat_to(online_list_t list,data_t data_buf,int conn_fd)
 void upload_file(data_t data_buf)
 {
     FILE *fp;
-    fp = fopen(data_buf.filename,"ab+");
-    int l;
+    
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/icould/");
+    
+    int l=strlen(data_buf.filename);
+    while(data_buf.filename[l-1]!='/')
+        l--;
+    strcat(preserve,data_buf.filename+l);
+    printf("%s\n",preserve);
+
+    fp = fopen(preserve,"ab+");
+
     if(NULL == fp)  
     {  
         printf("File:\t%s Can Not Open To Write\n",data_buf.filename);  
@@ -120,6 +138,106 @@ void upload_file(data_t data_buf)
     }
 }
 
+int check_file(char *filename,char *dirname)
+{
+    DIR *dp;    
+    if((dp = opendir(dirname))== NULL)
+    {
+        my_err("opendir",__LINE__);
+    }
+
+    struct dirent *ptr;
+
+    while((ptr = readdir(dp)) != NULL){
+        if(strcmp(ptr->d_name,filename)==0)    
+            return 1;
+    }
+    return 0;
+}        
+//查看云端文件
+void see_icould_file(data_t data_buf,int conn_fd)
+{
+    DIR *dp;
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/icould/");
+    
+    //printf("%s\n",preserve);
+
+    if((dp = opendir(preserve) )== NULL)
+    {
+        my_err("opendir",__LINE__);
+        send_note(conn_fd,"读取失败");
+    }
+
+    struct dirent *ptr;
+    data_buf.namelist.count=0;
+    while((ptr = readdir(dp)) != NULL){
+        if(ptr->d_name[0]!='.')
+        {
+            strcpy(data_buf.namelist.namelist_buf[data_buf.namelist.count],ptr->d_name);
+            data_buf.namelist.count++;
+            if(data_buf.namelist.count==199)
+                break;      
+        }
+    }
+    qsort(data_buf.namelist.namelist_buf,data_buf.namelist.count,
+          sizeof(data_buf.namelist.namelist_buf[0]),cmp);
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+        my_err("send",__LINE__);
+    }
+
+}
+
+//删除云端文件
+void remove_icould_file(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/icould/");
+    if(!check_file(data_buf.filename,preserve))
+    {
+        send_note(conn_fd,"该文件不存在");
+        return ;
+    }
+    else{
+        strcat(preserve,data_buf.filename);
+        remove(preserve);
+        send_note(conn_fd,"该文件删除成功");
+    }
+}
+
+//从云端下载文件
+void download_icould_file(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/icould/");
+    strcat(preserve,data_buf.filename);
+    
+    FILE *fp;
+    fp = fopen(preserve,"rb");
+    if(NULL == fp )  
+    {
+        send_note(conn_fd,"文件不存在");  
+        printf("File:%s Not Found\n", data_buf.filename);  
+    }
+	else{
+		while((fread(data_buf.temp_buf,sizeof(char),500,fp)>0)){
+        	if(send(conn_fd,&data_buf,sizeof(data_t),0)<0)  
+        	{  
+            	printf("Send File:\t%s Failed\n", data_buf.filename);  
+            	break;  
+        	}  
+        	memset(data_buf.temp_buf,0,BUFSIZE);
+    	}
+		fclose(fp);
+	}
+
+}
 
 //在线发送文件
 void send_online_file(online_list_t list,data_t data_buf,int conn_fd)
@@ -163,12 +281,17 @@ void add_friend(online_list_t list,data_t data_buf,int conn_fd)
         send_note(conn_fd,"该用户不存在！");
         return ;
     }
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/friendlist");
+    
     char test[31];
     FILE *fp=NULL;
     online_node_t *pos;;
-    if(!access(data_buf.user.username,0))
+    if(!access(preserve,0))
     {
-        fp = fopen(data_buf.user.username,"r");
+        fp = fopen(preserve,"r");
         if(NULL == fp)
         {
             printf("open file fail\n");
@@ -216,8 +339,17 @@ void add_friend(online_list_t list,data_t data_buf,int conn_fd)
 //将好友信息写入文件
 void write_in_file(data_t data_buf)
 {
-    FILE *fp1 = fopen(data_buf.user.username,"a+");
-    FILE *fp2 = fopen(data_buf.name_to,"a+");
+    char filename[256]="./USER.dat/";
+    strcat(filename,data_buf.user.username);
+    strcat(filename,"/friendlist");
+    FILE *fp1 = fopen(filename,"a+");
+    
+    memset(&filename,0,sizeof(filename));
+    strcpy(filename,"./USER.dat/");
+    strcat(filename,data_buf.name_to);
+    strcat(filename,"/friendlist");
+    FILE *fp2 = fopen(filename,"a+");
+    
     if(NULL == fp1)
     {
         printf("can't open %s",data_buf.user.username);

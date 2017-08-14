@@ -22,13 +22,18 @@ typedef struct {
 }user_time_t;
 
 typedef struct{
+	int count;
+	char namelist_buf[200][30];
+}namelist_t;
+
+typedef struct{
 	int type;//要做什么
 	account_t user;
 	char name_to[30];
-	char filename[30];
+	char filename[256];
+	namelist_t namelist;
 	char temp_buf[BUFSIZE];
 }data_t;
-
 //char send_buf[BUFSIZE+60];
 //char recv_buf[BUFSIZE+60];
 //直接读取键盘输入值

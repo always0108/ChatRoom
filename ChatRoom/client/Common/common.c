@@ -19,18 +19,18 @@ void my_err(const char * err_string,int line)
 }
 
 
-//发送消息
+//服务器向客户端发送消息
 void send_note(int conn_fd,const char *string)
 {
 	data_t data_buf ;	
 	strcpy(data_buf.temp_buf,string);
     data_buf.temp_buf[strlen(string)]='\0';
-    data_buf.type=0;
+	data_buf.type=0;
     if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
         my_err("send",__LINE__);}
 }
 
-//发送数据
+//发送数据，用于登录时
 void send_data(int conn_fd,const char *string)
 {
     if(send(conn_fd,string,strlen(string),0)<0){

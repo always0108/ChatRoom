@@ -11,6 +11,8 @@
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<unistd.h>
+#include<sys/stat.h>
+#include<dirent.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
 #include<errno.h>
@@ -33,6 +35,7 @@ void accept_in(int sock_fd);//服务器开始监听
 void sign_in(data_t data_buf,int conn_fd);//登录 1
 
 void sign_up(data_t data_buf,int conn_fd);//注册 2
+void init_user(char *username);//初始化用户文件夹
 
 //定义全局变量，用于存储登陆用户信息
 account_t gl_CurUser = { 0, 0, "Anonymous","" };
@@ -54,7 +57,6 @@ void *thread(void *arg)
    int conn_fd=ts->connfd;
    /*线程资源回收*/
     pthread_detach(pthread_self());
-
     while(1){
         memset(&data_buf,0,sizeof(data_t));
         if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
@@ -103,6 +105,15 @@ void *thread(void *arg)
             case 8:
                     add_friend(list,data_buf,conn_fd);
                     break;
+            case 9:
+                    see_icould_file(data_buf,conn_fd);
+                    break;
+            case 10:
+                    remove_icould_file(data_buf,conn_fd);
+                    break;
+            case 11:
+                    download_icould_file(data_buf,conn_fd);
+                    break;                    
             }
         }   
     }
@@ -213,19 +224,42 @@ void sign_up(data_t data_buf,int conn_fd)
 	Account_Srv_FetchAll(head);
     if (NULL!=Account_Srv_FindByUsrName(head,data_buf.user.username))
 	{
-        send_data(conn_fd,"n\nThis name had been occupied\n");
+        //printf("\n----------------\n");
+        send_data(conn_fd,"nThis name had been occupied\n");
     }         
 	else {
-		if (Account_Srv_Add(&data_buf.user)){  	
-        send_data(conn_fd,"y!\n");
+		if (Account_Srv_Add(&data_buf.user)){  
+            init_user(data_buf.user.username);
+            send_data(conn_fd,"y!\n");
         }
         else{
             send_data(conn_fd,"nAdd fail\n");}
 	    }
 }
 
+void init_user(char *username)
+{
+    chdir("USER.dat");
+    mkdir(username,0777);
+    chdir(username);
+    FILE *fp1,*fp2;
+    fp1=fopen("friendlist","a+");//好友列表
+    fp2=fopen("grouplist","a+");//群列表
+    fclose(fp1);
+    fclose(fp2);
+    mkdir("offlinedata",0777);//离线数据
+    mkdir("notehistroy",0777);//消息记录
+    mkdir("icould",0777);//云盘
+    chdir("../../");	
+}
+
 int main(void)
 {
+    if(NULL==opendir("USER.dat"))
+        mkdir("USER.dat",0777);
+    if(NULL==opendir("GROUP.dat"))
+        mkdir("GROUP.dat",0777);
+
 	List_Init(list, online_node_t);
     int sock_fd=ready();
     accept_in(sock_fd);
