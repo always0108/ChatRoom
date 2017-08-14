@@ -11,99 +11,69 @@
 #include<arpa/inet.h>
 #include<pthread.h>
 
+#define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 pthread_mutex_t mutex;
 pthread_cond_t cond;
+extern account_t gl_CurUser;
 
 int conn_fd;
-char ch;
-int flag=0;
+data_t data_recv;
 
 void *Main_Menu_accept(void)
 {
-	data_t data_buf;
 	int ret;
 	char send_buf[1024];
+	data_t data_buf;
+	
 	/*线程资源回收*/
     pthread_detach(pthread_self());
-	sleep(1);
+	
 	while(1){
         memset(&data_buf,0,sizeof(data_t));
         if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
-			send_data(conn_fd,"n\n");
 			pthread_exit(0);
         }else
 		{
-			char ch;
-			if(data_buf.type==0||data_buf.type==7)
-			{
-				printf("\t\t\t%s\n",data_buf.temp_buf);
-			}
-			pthread_mutex_lock(&mutex);
-			pthread_cond_wait(&cond,&mutex);
-            switch(data_buf.type)
+			data_recv=data_buf;
+			switch(data_buf.type)
         	{
+				case 0:
+				case 7:
+						printf("\t\t\t%s\n",data_buf.temp_buf);
+						break;
         	    case 3:	
-					    //getchar();
-						system("clear");
-						printf("\n\t\t\t是否接收(y or n):\t");
-						ch = getchar();
-						getchar();
-						if(ch=='y')
-				    	{	
-							printf("\n\n\t\t\t%s发来消息:",data_buf.user.username);
-							printf("%s\n",data_buf.temp_buf);
-						}
-						else{
-							printf("\t\t\t你已忽略该消息\n");
-						}						
-						chat_to(data_buf,conn_fd,"send sucess\n");					
+						printf("\n\n\t\t\t%s发来消息:",data_buf.user.username);
+						printf("%s\n",data_buf.temp_buf);									
 						break;
 				case 4: 
-					printf("\n\n\t\t\t%s私聊你:",data_buf.user.username);
-					printf("%s\n",data_buf.temp_buf);
-					break;
-				case 6:
-					recive_online_file(data_buf,conn_fd); 
-					break;   
-				case 8:
-						getchar();
-						system("clear");
-						printf("\n\t\t\t%s请求加好友\n",data_buf.user.username);
-						printf("\n\t\t\t是否接受(y or n):\t");
-						ch = getchar();
-						getchar();
-						if(ch=='y')
-				    	{	
-							data_buf.type=0;
-							if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    							my_err("send",__LINE__);
-    						printf("\t\t\t你们已经成为了好友\n");
-							}
-							chat_to(data_buf,conn_fd,"对方已接受你的好友请求\n");
-						}
-						else{
-							printf("\t\t\t你拒绝了对方的请求\n");
-							chat_to(data_buf,conn_fd,"对方拒绝了你的请求\n");
-						}						
-											
+						printf("\n\n\t\t\t%s私聊你:",data_buf.user.username);
+						printf("%s\n",data_buf.temp_buf);										
 						break;
+				case 6:
+						recive_online_file(data_buf,conn_fd); 
+						break;   
+				case 8:
+						printf("\n\t\t\t%s请求加好友\n",data_buf.user.username);
+						printf("\n\t\t\t是否接受(y or n):\t");			
 						break;
        	 	}
-			pthread_mutex_unlock(&mutex);
         }   
 	}
 }
 
-void *Main_Menu_input(void)
+void Main_Menu(int fd)
 {
+	conn_fd=fd;
+	pthread_t thid;
+	pthread_create(&thid,NULL,(void*)Main_Menu_accept,NULL);
+	
 	char choice;
-	/*线程资源回收*/
-    pthread_detach(pthread_self());
 	do {
 		system("clear");
-		printf("\n\t\t\t==================================================================\n");
+		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
+		printf("\t\t\t==================================================================\n");
 		printf("\t\t\t         **************** happy chatroom ****************         \n");
 		printf("\t\t\t==================================================================\n");
 		printf("\t\t\t\t=>\t[1]群聊\n");
@@ -114,8 +84,6 @@ void *Main_Menu_input(void)
 		printf("\t\t\t\t=>\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
-		pthread_mutex_lock(&mutex);
-		pthread_cond_wait(&cond,&mutex);
 		choice = getche();
 		switch (choice) {
 			case '1':
@@ -133,37 +101,56 @@ void *Main_Menu_input(void)
 			case '5':
 			   		add_friend(conn_fd);
 					break;
+			case 'y':
+					if(data_recv.type==8)
+					{
+						data_recv.type=0;
+						if(send(conn_fd,&data_recv,sizeof(data_t),0) < 0){
+							my_err("send",__LINE__);
+						}
+						chat_to(data_recv,conn_fd,"对方已接受你的好友请求\n");
+						printf("\n\t\t\t你们已经成为了好友\n");
+					}
+					PAUSE
+					memset(&data_recv,0,sizeof(data_t));
+					break;
+			case 'n':
+				if(data_recv.type == 8)
+				{	
+					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
+					printf("\n\t\t\t你拒绝了对方的好友请求\n");
+				}
+				PAUSE
+				memset(&data_recv,0,sizeof(data_t));
+				break;
 		}
-		pthread_mutex_unlock(&mutex);
 	}while ('q' != choice);
-	flag = 1;
-	pthread_exit(0);
 }
 
-
-void Main_Menu(int fd)
+//群聊
+void send_all(int conn_fd)
 {
-	conn_fd=fd;
-	pthread_t thid1,thid2;
-	pthread_mutex_init(&mutex,NULL);
-	pthread_cond_init(&cond,NULL);
-
-    pthread_create(&thid1,NULL,(void*)Main_Menu_input,NULL);
-	pthread_create(&thid2,NULL,(void*)Main_Menu_accept,NULL);
-	
-	do{
-		pthread_cond_signal(&cond);
-	}while(flag != 1);
-
-	pthread_mutex_destroy(&mutex);
-	pthread_cond_destroy(&cond);
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	printf("\n\n\t\t\t请输入你要发送的信息：");
+	fgets(data_buf.temp_buf,BUFSIZE,stdin);
+	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+	data_buf.type=3;
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+    	my_err("send",__LINE__);
+    }
+	getchar();
 }
 
-
+//私聊
 void send_privacy(int conn_fd)
 {
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
 	printf("\n\n\t\t\t请输入你要私聊人名字：");
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
@@ -171,21 +158,6 @@ void send_privacy(int conn_fd)
 	fgets(data_buf.temp_buf,BUFSIZE,stdin);
 	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
 	data_buf.type=4;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    	my_err("send",__LINE__);
-    }
-	
-	getchar();
-}
-
-void send_all(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	printf("\n\n\t\t\t请输入你要发送的信息：");
-	fgets(data_buf.temp_buf,BUFSIZE,stdin);
-	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-	data_buf.type=3;
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
     	my_err("send",__LINE__);
     }
@@ -206,12 +178,14 @@ void chat_to(data_t data_temp,int conn_fd,char *string)
     }
 }
 
-
+//上传文件
 void upload_file(int conn_fd)
 {
 	data_t data_buf;
 	int ret;
 	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
 	printf("\n\n\t\t\t请输入你要上传的文件名：");
 	fgets(data_buf.filename,30,stdin);
 	data_buf.filename[strlen(data_buf.filename)-1]='\0';
@@ -238,11 +212,14 @@ void upload_file(int conn_fd)
 	getchar();  
 }
 
+//发送在线文件
 void send_online_file(int conn_fd)
 {
 	data_t data_buf;
 	int ret;
 	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
 	printf("\n\n\t\t\t请输入你要传送的目标用户名：");
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
@@ -272,10 +249,14 @@ void send_online_file(int conn_fd)
 	getchar(); 
 }
 
+
+//添加好友
 void add_friend(int conn_fd)
 {
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
 	printf("\n\n\t\t\t请输入你要添加好友的名称：");
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
@@ -286,6 +267,8 @@ void add_friend(int conn_fd)
 	getchar();
 }
 
+
+//接受在线文件
 void recive_online_file(data_t data_buf,int conn_fd)
 {
     FILE *fp;

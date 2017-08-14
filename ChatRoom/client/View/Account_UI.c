@@ -87,7 +87,7 @@ int SysLogin(int connfd)
 					if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
                         my_err("send",__LINE__);
         			}
-					//读取欢迎信息并打印出来
+					
 					memset(recv_buf,0,sizeof(recv_buf));
         			if((ret = my_recv(conn_fd,recv_buf,sizeof(recv_buf))) < 0){
             			printf("data is too long\n");
@@ -95,6 +95,8 @@ int SysLogin(int connfd)
         			}
 					if (recv_buf[0]=='y')
 			        {
+						strcpy(gl_CurUser.username,data_buf.user.username);
+						gl_CurUser.username[strlen(gl_CurUser.username)]='\0';
 			            return 1;
 		            }
 		            printf("\n\t\t\t%s\n",recv_buf+1);
