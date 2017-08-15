@@ -4,11 +4,15 @@
 
 #include <stdio.h>
 #include "../View/Account_UI.h"
+
 #define BUFSIZE 512
+#define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
+
 void my_err(const char * err_string,int line);
 int my_recv(int conn_fd,char *data_buf,int len);
 void send_data(int conn_fd,const char *string);
 void send_note(int conn_fd,const char *string);
+
 typedef struct {
 	int year;
 	int month;
@@ -27,15 +31,23 @@ typedef struct{
 }namelist_t;
 
 typedef struct{
+	char name[30];
+	char content[BUFSIZE];
+	user_date_t date;
+	user_time_t time;
+}histroy_t;
+
+typedef struct{
 	int type;//要做什么
 	account_t user;
 	char name_to[30];
 	char filename[256];
 	namelist_t namelist;
+	histroy_t histroy;
 	char temp_buf[BUFSIZE];
 }data_t;
-//char send_buf[BUFSIZE+60];
-//char recv_buf[BUFSIZE+60];
+
+
 //直接读取键盘输入值
 int ScanKeyboard();
 

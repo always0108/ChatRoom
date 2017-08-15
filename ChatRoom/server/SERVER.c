@@ -37,6 +37,7 @@ void sign_in(data_t data_buf,int conn_fd);//登录 1
 void sign_up(data_t data_buf,int conn_fd);//注册 2
 void init_user(char *username);//初始化用户文件夹
 
+
 //定义全局变量，用于存储登陆用户信息
 account_t gl_CurUser = { 0, 0, "Anonymous","" };
 online_list_t list;
@@ -113,7 +114,13 @@ void *thread(void *arg)
                     break;
             case 11:
                     download_icould_file(data_buf,conn_fd);
-                    break;                    
+                    break;
+            case 12:
+                    get_friendlist(data_buf,conn_fd);
+                    break;     
+            case 13:
+                    get_chathistroy(data_buf,conn_fd);
+                    break;
             }
         }   
     }

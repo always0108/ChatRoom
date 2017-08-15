@@ -17,6 +17,7 @@
 #include<errno.h>
 #include<pthread.h>
 #include"action.h"
+#include"../Common/common.h"
 #include <sys/io.h>
 
 //比较字符串
@@ -69,12 +70,16 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
                 send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
             }
+            //给对方写入消息记录
             flag = 1;
             break;
         }
     }
-    if(flag == 1)
+    if(flag == 1){
         send_note(conn_fd,"send sucess");
+    //给自己写入消息记录
+    wirte_in_histroy(data_buf);
+    }
     else 
         send_note(conn_fd,"send fail");
 }
@@ -154,6 +159,7 @@ int check_file(char *filename,char *dirname)
     }
     return 0;
 }        
+
 //查看云端文件
 void see_icould_file(data_t data_buf,int conn_fd)
 {
@@ -169,6 +175,7 @@ void see_icould_file(data_t data_buf,int conn_fd)
     {
         my_err("opendir",__LINE__);
         send_note(conn_fd,"读取失败");
+        return ;
     }
 
     struct dirent *ptr;
@@ -178,7 +185,7 @@ void see_icould_file(data_t data_buf,int conn_fd)
         {
             strcpy(data_buf.namelist.namelist_buf[data_buf.namelist.count],ptr->d_name);
             data_buf.namelist.count++;
-            if(data_buf.namelist.count==199)
+            if(data_buf.namelist.count>=200)
                 break;      
         }
     }
@@ -335,6 +342,98 @@ void add_friend(online_list_t list,data_t data_buf,int conn_fd)
         send_note(conn_fd,"\n\t\t\t对方已下线,请稍候\n");   
 }
 
+//查看好友列表
+void get_friendlist(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    char name[30];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/friendlist");
+
+    FILE *fp;
+    data_buf.namelist.count=0;
+    fp = fopen(preserve,"rb");
+    if(NULL == fp)
+    {
+        my_err("open file fail",__LINE__);
+        return;
+    }
+
+    while(fread(&name,30,1,fp)>0)
+    {
+        strcpy(data_buf.namelist.namelist_buf[data_buf.namelist.count],name);
+        data_buf.namelist.count++;
+        if(data_buf.namelist.count>=200)
+            break;
+    }        
+    qsort(data_buf.namelist.namelist_buf,data_buf.namelist.count,
+        sizeof(data_buf.namelist.namelist_buf[0]),cmp);
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+        my_err("send",__LINE__);
+    }
+}
+
+void get_chathistroy(data_t data_buf,int conn_fd)
+{
+    if(!check_friendlist(data_buf.user.username,data_buf.name_to))
+    {
+        send_note(conn_fd,"该好友不存在");
+        return ;
+    }
+    
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/notehistroy/");
+    strcat(preserve,data_buf.name_to);
+
+    printf("%s\n",preserve);
+    
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        my_err("open file fail",__LINE__);
+        return ;
+    }
+
+    while(!feof(fp)){
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+        {
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+        		my_err("send",__LINE__);
+            }
+        }
+    }
+    fclose(fp);
+    return ;
+}
+
+int check_friendlist(char *username,char *name_to)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/friendlist");
+
+    char test[30];
+    FILE *fp ;
+    fp = fopen(preserve,"rb");
+    while(!feof(fp)){
+        if(fread(&test,30,1,fp))
+        {
+            if(strcmp(test,name_to)==0)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+
+}
+
 
 //将好友信息写入文件
 void write_in_file(data_t data_buf)
@@ -393,3 +492,58 @@ int check_name(char *name)
     return 0;
 }
 
+
+int wirte_in_histroy(data_t data_buf)
+{
+    histroy_t histroy;
+    strcpy(histroy.name,data_buf.user.username);
+    strcpy(histroy.content,data_buf.temp_buf);
+    histroy.date=DateNow();
+    histroy.time=TimeNow();
+
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.name_to);
+    strcat(preserve,"/notehistroy/");
+    strcat(preserve,data_buf.user.username);
+
+    /*printf("%s\n",histroy.name);
+    printf("%s\n",histroy.content);
+    printf("%4d %2d %2d\n",histroy.date.year,histroy.date.month,histroy.date.day);
+    printf("%4d %2d %2d\n",histroy.time.hour,histroy.time.minute,histroy.time.second);
+    printf("%s\n",preserve);*/
+
+    FILE *fp;
+    fp = fopen(preserve,"a+");
+    if(NULL == fp)
+    {
+        my_err("open file fail",__LINE__);
+        return -1;
+    }else
+    {
+        fwrite(&histroy,sizeof(histroy_t),1,fp);
+    }
+    fclose(fp);
+    
+    strcpy(histroy.name,"我");
+    strcpy(histroy.content,data_buf.temp_buf);
+    histroy.date=DateNow();
+    histroy.time=TimeNow();
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/notehistroy/");
+    strcat(preserve,data_buf.name_to);
+    
+    
+    fp = fopen(preserve,"a+");
+    if(NULL == fp)
+    {
+        my_err("open file fail",__LINE__);
+        return -1;
+    }else
+    {
+        fwrite(&histroy,sizeof(histroy_t),1,fp);
+    }
+    fclose(fp);
+    return 0;
+}

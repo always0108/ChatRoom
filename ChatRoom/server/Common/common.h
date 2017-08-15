@@ -25,11 +25,20 @@ typedef struct{
 }namelist_t;
 
 typedef struct{
+	char name[30];
+	char content[BUFSIZE];
+	user_date_t date;
+	user_time_t time;
+}histroy_t;
+
+
+typedef struct{
 	int type;//要做什么
 	account_t user;
 	char name_to[30];
 	char filename[256];
 	namelist_t namelist;
+	histroy_t histroy;
 	char temp_buf[BUFSIZE];
 }data_t;
 
