@@ -32,6 +32,8 @@ void download_icould_file(data_t data_buf,int conn_fd);//从云端删除文件 1
 
 void send_online_file(online_list_t list,data_t data_buf,int conn_fd);//在线传输文件6
 
+void send_online_file_assist(online_list_t list,data_t data_buf,int conn_fd); //16
+
 void chat_to(online_list_t list,data_t data_buf,int conn_fd);//接受者给发送者回馈消息7
 
 void add_friend(online_list_t list,data_t data_buf,int conn_fd);//添加好友8
@@ -41,6 +43,10 @@ void get_friendlist(data_t data_buf,int conn_fd);//获取好友列表12
 void get_chathistroy(data_t data_buf,int conn_fd);//获取聊天记录13
 
 int check_friendlist(char *username,char *name_to);//检查是否 是好友
+
+void remove_friend(data_t data_buf,int conn_fd);//删除好友   14
+
+void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd);//私聊辅助函数  15
 
 int wirte_in_histroy(data_t data_buf);//将消息记录写入文件
 

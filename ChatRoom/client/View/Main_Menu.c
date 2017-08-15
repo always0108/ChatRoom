@@ -12,6 +12,8 @@
 #include<pthread.h>
 #include<dirent.h>
 #include"iCould_UI.h"
+#include"Friend.h"
+#include"Sendfile.h"
 
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
@@ -44,15 +46,15 @@ void *Main_Menu_accept(void)
 				case 0:
 				case 7:
 						printf("\t\t\t%s\n",data_buf.temp_buf);
-						send_note(conn_fd,"get");
 						break;
         	    case 3:	
-						printf("\n\n\t\t\t%s发来消息:",data_buf.user.username);
+						printf("\t\t\t%s发来消息:",data_buf.user.username);
 						printf("%s\n",data_buf.temp_buf);									
 						break;
 				case 4: 
-						printf("\n\n\t\t\t%s私聊你:",data_buf.user.username);
-						printf("%s\n",data_buf.temp_buf);										
+						system("clear");
+						printf("\n\t\t\t%s发来私聊消息\n",data_buf.user.username);
+						printf("\n\t\t\t输入 y 来查看(若处于聊天状态请先退出):\t");										
 						break;
 				case 6:
 						recive_online_file(data_buf); 
@@ -87,6 +89,17 @@ void *Main_Menu_accept(void)
 					printf("%02d:%02d:%02d\n",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
 					printf("\t\t\t\t%s\n",data_buf.histroy.content);
 					break;
+				case 15: 
+					printf("\n%s私聊你:",data_buf.user.username);
+					printf("%s\n",data_buf.temp_buf);										
+					break;
+				case 16:
+					printf("\n%s要向你传输文件:(y or n)",data_buf.user.username);
+					break;
+				case 17:
+					printf("------------\n开始传输文件\n-----------\n");
+					send_online_file(data_buf,conn_fd);
+					break;
 			}
         }   
 	}
@@ -108,10 +121,9 @@ void Main_Menu(int fd)
 		printf("\t\t\t\t=>\t[1]群聊\n");
 		printf("\t\t\t\t=>\t[2]私聊\n");
 		printf("\t\t\t\t=>\t[3]iCould\n");
-		printf("\t\t\t\t=>\t[4]添加好友\n");
+		printf("\t\t\t\t=>\t[4]好友管理\n");
 		printf("\t\t\t\t=>\t[5]在线传输文件\n");
-		printf("\t\t\t\t=>\t[6]查看好友表\n");
-		printf("\t\t\t\t=>\t[7]查看聊天记录\n");
+		printf("\t\t\t\t=>\t[6]查看聊天记录\n");
 		printf("\t\t\t\t=>\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
@@ -127,15 +139,12 @@ void Main_Menu(int fd)
 					iCould_Menu(data_recv,conn_fd);
 					break;
 			case '4':
-					add_friend(conn_fd);
+					Friend_Menu(data_recv,conn_fd);
 					break;
 			case '5':  
-					send_online_file(conn_fd);
+					send_online_file_assist(conn_fd);
 					break;
 			case '6':
-					get_friendlist(conn_fd);
-					break;
-			case '7':
 					get_chathistroy(conn_fd);
 					break;
 			case 'y':
@@ -147,6 +156,16 @@ void Main_Menu(int fd)
 						}
 						chat_to(data_recv,conn_fd,"对方已接受你的好友请求\n");
 						printf("\n\t\t\t你们已经成为了好友\n");
+					}else if(data_recv.type == 4){
+						printf("\n%s私聊你:",data_recv.user.username);
+						printf("%s\n",data_recv.temp_buf);
+						send_privacy_assist(conn_fd,data_recv.user.username);
+					}else if(data_recv.type == 16)
+					{
+						printf("\n\t\t\t开始接收......\n");
+						recive_online_file_assist(data_recv,conn_fd);
+						
+						
 					}
 					PAUSE
 					memset(&data_recv,0,sizeof(data_t));
@@ -156,6 +175,9 @@ void Main_Menu(int fd)
 				{	
 					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
 					printf("\n\t\t\t你拒绝了对方的好友请求\n");
+				}else if(data_recv.type == 16)
+				{
+					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
 				}
 				PAUSE
 				memset(&data_recv,0,sizeof(data_t));
@@ -188,16 +210,43 @@ void send_privacy(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\n\t\t\t请输入你要私聊人名字：");
+	printf("\n\t\t\t请输入你要私聊人名字：");
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
-	printf("\n\n\t\t\t请输入你要私聊的信息：");
+	data_buf.type=4;
+	system("clear");
+	printf("\n请输入要发送的内容：");
 	fgets(data_buf.temp_buf,BUFSIZE,stdin);
 	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-	data_buf.type=4;
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    	my_err("send",__LINE__);
-    }
+			my_err("send",__LINE__);
+	}
+	printf("send sucess\n");
+	send_privacy_assist(conn_fd ,data_buf.name_to);
+}
+
+//私聊辅助
+void send_privacy_assist(int conn_fd ,char *name)
+{
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	strcpy(data_buf.name_to,name);
+	data_buf.name_to[strlen(data_buf.name_to)]='\0';
+	data_buf.type=15;
+	while(1){
+		printf("\n请输入要发送的内容：");
+		fgets(data_buf.temp_buf,BUFSIZE,stdin);
+		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+		if(strcmp(data_buf.temp_buf,"quit")==0)
+			break;
+		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+		}
+		usleep(1000);
+		printf("send sucess\n");
+	}
 	getchar();
 }
 
@@ -214,106 +263,6 @@ void chat_to(data_t data_temp,int conn_fd,char *string)
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
     	my_err("send",__LINE__);
     }
-}
-
-//发送在线文件
-void send_online_file(int conn_fd)
-{
-	data_t data_buf;
-	int ret;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\n\t\t\t请输入你要传送的目标用户名：");
-	fgets(data_buf.name_to,30,stdin);
-	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
-	printf("\n\n\t\t\t请输入你要传送的文件的文件名：");
-	fgets(data_buf.filename,30,stdin);
-	data_buf.filename[strlen(data_buf.filename)-1]='\0';
-	data_buf.type=6;
-	FILE *fp;
-	fp = fopen(data_buf.filename,"rb");
-	if(NULL == fp )  
-    {  
-        printf("File:\t%s Not Found\n", data_buf.filename);  
-    }
-	else{
-		printf("send file begin\n\n");  
-		while((ret=fread(data_buf.temp_buf,sizeof(char),500,fp)>0)){
-        	if(send(conn_fd,&data_buf,sizeof(data_t),0)<0)  
-        	{  
-            	printf("Send File:\t%s Failed\n", data_buf.filename);  
-            	break;  
-        	}  
-        	memset(data_buf.temp_buf,0,BUFSIZE);
-    	}
-		printf("send file sucess\n");
-		fclose(fp);
-	}
-	getchar(); 
-}
-
-
-//添加好友
-void add_friend(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\n\t\t\t请输入你要添加好友的名称：");
-	fgets(data_buf.name_to,30,stdin);
-	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
-	data_buf.type=8;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    	my_err("send",__LINE__);
-    }
-	getchar();
-}
-
-
-//接收在线文件
-void recive_online_file(data_t data_buf)
-{
-    FILE *fp;
-	char filename[256];
-	memset(filename,0,sizeof(filename));
-	strcpy(filename,data_buf.name_to);
-	filename[strlen(filename)]='-';
-	filename[strlen(filename)]='\0';
-	strcat(filename,data_buf.filename);
-	filename[strlen(filename)]='\0';
-	fp = fopen(filename,"ab+");
-    int l;
-    if(NULL == fp)  
-    {  
-        printf("File:\t%s Can Not Open To Write\n",filename);  
-        exit(1);  
-    }
-    else{
-        l=strlen(data_buf.temp_buf);
-        fwrite(data_buf.temp_buf,sizeof(char),l,fp);//注意缓冲区内如果没有用完可能有很多空子符
-        fclose(fp);
-    }
-	printf("\t\t\t%s正在发送文件:",data_buf.user.username);
-	printf("%s",data_buf.filename);
-	printf("\t将保存为%s\n",filename);
-	if(l<500)
-		printf("\t\t\t发送完毕，请查收\n"); 
-}
-
-//获取好友列表
-void get_friendlist(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	data_buf.type=12;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	getchar();
 }
 
 //获取聊天记录

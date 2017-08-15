@@ -26,7 +26,6 @@ int cmp(const void *a, const void *b)
      return *(char*)a - *(char*)b;  
 }   
 
-
 //群聊
 void send_all(online_list_t list,data_t data_buf,int conn_fd)
 {
@@ -65,7 +64,7 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
                 send_note(conn_fd,"you can't send to yourself");
                 continue ;
             }    
-            send_note(pos->data.conn_fd,"\n\n\t\t\t有新的消息！\n");
+            send_note(pos->data.conn_fd,"\n\t\t\t有新的消息！\n");
             if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
                 send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
@@ -76,7 +75,6 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
         }
     }
     if(flag == 1){
-        send_note(conn_fd,"send sucess");
     //给自己写入消息记录
     wirte_in_histroy(data_buf);
     }
@@ -84,19 +82,40 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
         send_note(conn_fd,"send fail");
 }
 
+void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
+{
+    int flag = 0;
+    online_node_t *pos;
+    List_ForEach(list,pos)
+    {   
+        if(strcmp(pos->data.username,data_buf.name_to)==0)
+        {   if(pos->data.conn_fd == conn_fd)
+            {
+                send_note(conn_fd,"you can't send to yourself");
+                continue ;
+            }    
+            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+        		my_err("send",__LINE__);
+            }
+            flag = 1;
+            break;
+        }
+    }
+    if(flag == 1){
+    //写入消息记录
+    wirte_in_histroy(data_buf);
+    }
+    else 
+        send_note(conn_fd,"send fail");
+
+}
+
 
 //接收者给发送者回馈消息
 void chat_to(online_list_t list,data_t data_buf,int conn_fd)
 {
     online_node_t *pos;
-    /*List_ForEach(list,pos)
-    {
-        if(pos->data.conn_fd == conn_fd)
-        {   strcpy(data_buf.user.username,pos->data.username);
-            data_buf.user.username[strlen(data_buf.user.username)]='\0';
-            break ;
-        }
-    }*/
     pos = NULL;
     List_ForEach(list,pos)
     {   
@@ -249,11 +268,6 @@ void download_icould_file(data_t data_buf,int conn_fd)
 //在线发送文件
 void send_online_file(online_list_t list,data_t data_buf,int conn_fd)
 {
-    if(!check_name(data_buf.name_to))
-    {
-        send_note(conn_fd,"该用户不存在！");
-        return ;
-    }
     int flag = 0;
     online_node_t *pos;
     List_ForEach(list,pos)
@@ -273,10 +287,41 @@ void send_online_file(online_list_t list,data_t data_buf,int conn_fd)
         }
     }
     if(flag)
-        send_note(conn_fd,"send sucess");
+        ;
     else
         send_note(conn_fd,"send fail");
 
+}
+
+void send_online_file_assist(online_list_t list,data_t data_buf,int conn_fd)
+{
+    int flag=0;
+    online_node_t *pos;
+    if(!check_name(data_buf.name_to))
+    {
+        send_note(conn_fd,"该用户不存在！");
+        return ;
+    }
+    List_ForEach(list,pos)
+    {   
+        if(strcmp(pos->data.username,data_buf.name_to)==0)
+        {   if(pos->data.conn_fd == conn_fd)
+            {
+                send_note(conn_fd,"you can't send to yourself");
+                continue ;
+            }    
+            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+        		my_err("send",__LINE__);
+            }
+            flag=1;
+            break;
+        }
+    }
+    if(!flag)
+    {
+        send_note(conn_fd,"该用户已离线，请尝试发送离线文件\n");
+    }
 }
 
 
@@ -374,6 +419,8 @@ void get_friendlist(data_t data_buf,int conn_fd)
     }
 }
 
+
+//获取聊天记录
 void get_chathistroy(data_t data_buf,int conn_fd)
 {
     if(!check_friendlist(data_buf.user.username,data_buf.name_to))
@@ -434,6 +481,106 @@ int check_friendlist(char *username,char *name_to)
 
 }
 
+//删除好友   双向删除
+void remove_friend(data_t data_buf,int conn_fd)
+{
+    if(!check_friendlist(data_buf.user.username,data_buf.name_to))
+    {
+        send_note(conn_fd,"该好友不存在");
+        return ;
+    }
+
+    //在用户的好友列表删除其想要删除的好友
+    char filename[256]="./USER.dat/";
+    char filename_temp[256];
+    char preserve[256];
+    strcat(filename,data_buf.user.username);
+    strcat(filename,"/friendlist");
+    
+    strcpy(filename_temp,filename);
+    strcpy(preserve,filename);
+    strcat(filename_temp,"temp");
+    
+    if(rename(filename,filename_temp)<0)
+    {
+        send_note(conn_fd,"remove fail");
+        printf("open fail fail");
+        return ;
+    }
+
+    FILE *fpSour, *fpTarg;
+	fpSour = fopen(filename_temp, "rb");
+	if (NULL == fpSour) {
+		printf("Cannot open file %s!\n", filename_temp);
+		return ;
+	}
+
+	fpTarg = fopen(preserve, "wb");
+	if (NULL == fpTarg) {
+		printf("Cannot open file %s!\n", preserve);
+		return ;
+	}
+	char buf[30];
+	while (!feof(fpSour)) {
+		if (fread(&buf, 30 , 1, fpSour)) {
+			if (strcmp(buf,data_buf.name_to)==0) {
+				 //找到要删除的用户就跳过
+				continue;
+			}
+			fwrite(&buf, 30, 1, fpTarg);
+		}
+	}
+	fclose(fpTarg);
+	fclose(fpSour);
+	//删除临时文件
+    remove(filename_temp);
+    
+    //在要删除的目标好的好友列表内删除该用户
+    strcpy(filename,"./USER.dat/");
+    strcat(filename,data_buf.name_to);
+    strcat(filename,"/friendlist");
+    
+    strcpy(filename_temp,filename);
+    strcpy(preserve,filename);
+    strcat(filename_temp,"temp");
+    
+    if(rename(filename,filename_temp)<0)
+    {
+        send_note(conn_fd,"remove fail");
+        printf("open fail fail");
+        return ;
+    }
+
+	fpSour = fopen(filename_temp, "rb");
+	if (NULL == fpSour) {
+		printf("Cannot open file %s!\n", filename_temp);
+		return ;
+	}
+
+	fpTarg = fopen(preserve, "wb");
+	if (NULL == fpTarg) {
+		printf("Cannot open file %s!\n", preserve);
+		return ;
+    }
+    
+	while (!feof(fpSour)) {
+		if (fread(&buf, 30 , 1, fpSour)) {
+			if (strcmp(buf,data_buf.user.username)==0) {
+			   //找到要删除的用户就跳过
+				continue;
+			}
+			fwrite(&buf, 30, 1, fpTarg);
+		}
+	}
+	fclose(fpTarg);
+	fclose(fpSour);
+	//删除临时文件
+	remove(filename_temp);
+
+    send_note(conn_fd,"删除成功");
+    //两方都删除完毕做到双向删除
+}
+
 
 //将好友信息写入文件
 void write_in_file(data_t data_buf)
@@ -492,7 +639,7 @@ int check_name(char *name)
     return 0;
 }
 
-
+//将好友信息写入文件
 int wirte_in_histroy(data_t data_buf)
 {
     histroy_t histroy;

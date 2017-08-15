@@ -101,6 +101,7 @@ void *thread(void *arg)
                     send_online_file(list,data_buf,conn_fd);
                     break;
             case 7:
+            case 17:
                     chat_to(list,data_buf,conn_fd);
                     break;
             case 8:
@@ -120,6 +121,15 @@ void *thread(void *arg)
                     break;     
             case 13:
                     get_chathistroy(data_buf,conn_fd);
+                    break;
+            case 14:
+                    remove_friend(data_buf,conn_fd);
+                    break;
+            case 15:
+                    send_privacy_assist(list,data_buf,conn_fd);
+                    break;
+            case 16:
+                    send_online_file_assist(list,data_buf,conn_fd);
                     break;
             }
         }   
@@ -231,7 +241,6 @@ void sign_up(data_t data_buf,int conn_fd)
 	Account_Srv_FetchAll(head);
     if (NULL!=Account_Srv_FindByUsrName(head,data_buf.user.username))
 	{
-        //printf("\n----------------\n");
         send_data(conn_fd,"nThis name had been occupied\n");
     }         
 	else {

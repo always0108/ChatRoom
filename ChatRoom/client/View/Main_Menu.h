@@ -16,20 +16,10 @@ void send_all(int conn_fd);
 
 //私聊
 void send_privacy(int conn_fd);
+void send_privacy_assist(int conn_fd ,char *name);
 
-//发送文件
-void send_online_file(int conn_fd);
-
-//发送在线文件
-void recive_online_file(data_t data_buf);
-
+//接收者给发送者消息提示
 void chat_to(data_t data_temp,int conn_fd,char *string);
-
-//添加好友
-void add_friend(int conn_fd);
-
-//获取好友列表
-void get_friendlist(int conn_fd);
 
 //获取聊天记录
 void get_chathistroy(int conn_fd);
