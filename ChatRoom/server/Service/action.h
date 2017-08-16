@@ -68,16 +68,19 @@ void see_offline_file(data_t data_buf,int conn_fd);//查看离线文件列表 24
 
 void remove_useless_file(char *username);//清空多余的离线文件  
 
-void group_init(data_t data_buf,int conn_fd);//初始化群
+void group_init(data_t data_buf,int conn_fd);//初始化群 25
 
-void group_add(data_t data_buf,int conn_fd);//添加群成员
+void group_add(data_t data_buf,int conn_fd);//添加群成员 26
 
-void show_group_member(data_t data_buf,int conn_fd);//展示群成员
+void show_group_member(data_t data_buf,int conn_fd);//展示群成员 27
 
-void chat_in_group(online_list_t list,data_t data_buf,int conn_fd);//群内聊天
+void chat_in_group(online_list_t list,data_t data_buf,int conn_fd);//群内聊天 28
 
 void write_group_histroy(data_t data_buf,int conn_fd);//群聊天记录
 
-void get_group_histroy(data_t data_buf,int conn_fd);//读取群聊天记录
+void get_group_histroy(data_t data_buf,int conn_fd);//读取群聊天记录 29
+
+void get_my_group(data_t data_buf,int conn_fd);//读取群成员列表 30
+
 
 #endif

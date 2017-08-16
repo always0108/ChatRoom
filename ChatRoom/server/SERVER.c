@@ -177,7 +177,11 @@ void *thread(void *arg)
             case 29:
                     get_group_histroy(data_buf,conn_fd);
                     break;
-        }
+            case 30:
+                    get_my_group(data_buf,conn_fd);
+                    break;
+        
+            }
         }   
     }
 }
@@ -315,6 +319,7 @@ void sign_up(data_t data_buf,int conn_fd)
 	    }
 }
 
+//初始化用户文件夹
 void init_user(char *username)
 {
     chdir("USER.dat");
@@ -333,6 +338,7 @@ void init_user(char *username)
     chdir("../../../");	
 }
 
+//服务器日志
 void write_server_log(log_t log)
 {
     FILE *fp;

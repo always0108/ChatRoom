@@ -166,7 +166,7 @@ void check_offline_message(char *username,int conn_fd)
     fp = fopen(preserve,"r");
     if(NULL==fp)
     {
-        printf("offlinenote does not exist\n");
+        printf("offlinefile does not exist\n");
         
     }else{
         usleep(10000);
@@ -1005,9 +1005,11 @@ void group_init(data_t data_buf,int conn_fd)
 
     FILE *fp1;
     fp1 = fopen(preserve,"r");
+    
     if(fp1!=NULL)
     {
         send_note(conn_fd,"群名与其它群名重复");
+        fclose(fp1);
         return ;
     }
 
@@ -1015,7 +1017,6 @@ void group_init(data_t data_buf,int conn_fd)
     fp = fopen(preserve,"a+");
     if(NULL==fp)
     {
-        send_note(conn_fd,"创建失败");
         printf("open file fail\n");
         return ;
     }
@@ -1024,14 +1025,15 @@ void group_init(data_t data_buf,int conn_fd)
     
     fclose(fp);
     
-    strcpy(preserve,"./USR.dat/");
+    strcpy(preserve,"./USER.dat/");
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/grouplist");
+
+    printf("%s\n",preserve);
     
     fp = fopen(preserve,"a+");
     if(NULL==fp)
     {
-        send_note(conn_fd,"创建失败");
         printf("open file fail\n");
         return ;
     }
@@ -1043,6 +1045,7 @@ void group_init(data_t data_buf,int conn_fd)
 
 //添加群成员
 void group_add(data_t data_buf,int conn_fd)
+
 {
     char preserve[256];
     strcpy(preserve,"./GROUP.dat/");
@@ -1066,11 +1069,11 @@ void group_add(data_t data_buf,int conn_fd)
             printf("open file fail\n");
             return ;
         }
-        fprintf(fp,"%30s\t%d\n",data_buf.user.username,data_buf.group.type);
+        fprintf(fp,"%30s\t%d\n",data_buf.temp_buf,data_buf.group.type);
         fclose(fp);
         
         
-        strcpy(preserve,"./USR.dat/");
+        strcpy(preserve,"./USER.dat/");
         strcat(preserve,data_buf.temp_buf);
         strcat(preserve,"/grouplist");
         
@@ -1108,6 +1111,7 @@ void show_group_member(data_t data_buf,int conn_fd)
         while(!feof(fp))
         {
             fscanf(fp,"%30s\t%d\n",data_buf.temp_buf,&data_buf.group.type);
+            //printf("%30s\t%d\n",data_buf.temp_buf,data_buf.group.type);
             if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
         		my_err("send",__LINE__);
             }
@@ -1205,16 +1209,22 @@ void get_group_histroy(data_t data_buf,int conn_fd)
     while(!feof(fp)){
         if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
         {
-            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+            printf("\n\t\t\t%s\t",data_buf.histroy.name);
+            printf("%4d-%02d-%02d\t%02d:%02d:%02d\n",
+            data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day,
+            data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
+            printf("%s\n",data_buf.histroy.content);
+            /*if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
                 send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
-            }
+            }*/
         }
     }
     fclose(fp);
     return ;
 }
 
+//列出我的群
 void get_my_group(data_t data_buf,int conn_fd)
 {
     char preserve[256];
@@ -1228,7 +1238,12 @@ void get_my_group(data_t data_buf,int conn_fd)
     fp=fopen(preserve,"r");
     while(!feof(fp))
     {
-    
+        fscanf(fp,"%s\n",data_buf.temp_buf);
+        //printf("%s\n",data_buf.temp_buf);
+        if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+            send_note(conn_fd,"send fail");
+            my_err("send",__LINE__);
+        }
     }
-
+    fclose(fp);
 }

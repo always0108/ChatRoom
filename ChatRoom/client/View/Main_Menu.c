@@ -70,17 +70,17 @@ void *Main_Menu_accept(void)
 						printf("\n\t\t\t输入 y 来查看(若处于聊天状态请先退出):\t");										
 						break;
 				case 5:
-						printf("\t\t\t%-30s",data_buf.temp_buf);
+						printf("\t\t\t%-20s",data_buf.temp_buf);
 						switch(data_buf.group.type)
 						{
 							case 0:
-								printf("%6s","群主");
+								printf("%-6s","群主");
 								break;
 							case 1:
-								printf("%6s","群成员");
+								printf("%-6s","群成员");
 								break;
 							case 2:
-								printf("%6s","管理员");
+								printf("%-6s","管理员");
 								break;
 						}
 						printf("\n");
@@ -133,6 +133,9 @@ void *Main_Menu_accept(void)
 					printf("------------\n开始传输文件\n-----------\n");
 					send_online_file(data_buf,conn_fd);
 					break;
+				case 30:
+					printf("\t\t\t\t%s\n",data_buf.temp_buf);
+					break;
 			}
         }   
 	}
@@ -163,6 +166,7 @@ void Main_Menu(int fd)
 		printf("\t\t\t\t=>\t[5]在线传输文件\n");
 		printf("\t\t\t\t=>\t[6]查看聊天记录\n");
 		printf("\t\t\t\t=>\t[7]离线中心\n");
+		printf("\t\t\t\t=>\t[8]群中心\n");
 		printf("\t\t\t\t=>\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
@@ -189,6 +193,9 @@ void Main_Menu(int fd)
 					break;
 			case '7':
 					Offlinecenter_Menu(conn_fd);
+					break;
+			case '8':
+					Group_Menu(conn_fd);
 					break;
 			case 'y':
 					if(data_recv.type==8)
@@ -346,7 +353,9 @@ void Group_Menu(int conn_fd)
 			case '5':
 					get_group_histroy(conn_fd);
 					break;
-
+			case '6':
+					get_my_group(conn_fd);
+					break;
 		}
 	}while ('q' != choice);
 
@@ -381,7 +390,7 @@ void group_init(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\t\t\t请输入要建立的群名:");
+	printf("\n\t\t\t请输入要建立的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=25;
@@ -398,7 +407,7 @@ void group_add(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("请输入你添加成员的群名:");
+	printf("\n\t\t\t请输入你添加成员的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=26;
@@ -411,14 +420,15 @@ void group_add(int conn_fd)
 		printf("请输入你要添加人的名称:");
 		fgets(data_buf.temp_buf,BUFSIZE,stdin);
 		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+		if(strcmp(data_buf.temp_buf,"quit")==0)
+			break;
 		printf("请输入他的权限(1普通用户2管理员)：");
 		scanf("%d",&data_buf.group.type);
 		getchar();
-		if(strcmp(data_buf.temp_buf,"quit")==0)
-			break;
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
+		usleep(10000);
 	}
 	getchar();
 }
@@ -430,10 +440,15 @@ void show_group_member(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\t\t\t请输入要查看的群名:");
+	printf("\n\t\t\t请输入要查看的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=27;
+	system("clear");
+	printf("\t\t\t==================================================================\n");
+	printf("\t\t\t         ****************   %s  ****************         \n",data_buf.group.name);
+	printf("\t\t\t         **************** 群成员 ****************         \n");
+	printf("\t\t\t==================================================================\n");
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 		my_err("send",__LINE__);
 	}
@@ -447,7 +462,7 @@ void chat_in_group(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\t\t\t请输入要查看的群名:");
+	printf("\n\t\t\t请输入要查看的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=28;
@@ -473,7 +488,7 @@ void get_group_histroy(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\t\t\t请输入要查看的群名:");
+	printf("\n\t\t\t请输入要查看的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=29;
@@ -495,6 +510,9 @@ void get_my_group(int conn_fd)
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
 	data_buf.type=30;
 	system("clear");
+	printf("\t\t\t==================================================================\n");
+	printf("\t\t\t         **************** 我的群 ****************         \n");
+	printf("\t\t\t==================================================================\n");
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 		my_err("send",__LINE__);
 	}
