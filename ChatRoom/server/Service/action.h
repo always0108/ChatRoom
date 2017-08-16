@@ -48,6 +48,24 @@ void remove_friend(data_t data_buf,int conn_fd);//删除好友   14
 
 void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd);//私聊辅助函数  15
 
-int wirte_in_histroy(data_t data_buf);//将消息记录写入文件
+int wirte_in_histroy(data_t data_buf);//将消息记录写入文件 
+
+void send_offline_message(data_t data_buf,int conn_fd);//离线消息 18
+
+void check_offline_message(char *username,int conn_fd);//检查离线消息是否存在
+
+void read_offline_message(char *username,int conn_fd);//读取离线消息 19
+
+void send_offline_file(data_t data_buf);//发送离线文件 20
+
+void send_offline_file_assist(data_t data_buf);//将发送的离线文件的发送者信息存起来   21
+
+void read_offline_file_sender(char *username,int conn_fd);//读取文件的发送者信息  22
+
+void download_offline_file(data_t data_buf,int conn_fd);//下载离线文件 23
+
+void see_offline_file(data_t data_buf,int conn_fd);//查看离线文件列表 24
+
+void remove_useless_file(char *username);//清空多余的离线文件  
 
 #endif

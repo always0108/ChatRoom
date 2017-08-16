@@ -11,7 +11,7 @@
 #include"../Common/common.h"
 
 //icould菜单
-void iCould_Menu(data_t data_recv,int conn_fd);
+void iCould_Menu(int conn_fd);
 
 //上传文件到云端
 void upload_file(int conn_fd);

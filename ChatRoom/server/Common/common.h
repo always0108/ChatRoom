@@ -31,10 +31,20 @@ typedef struct{
 	user_time_t time;
 }histroy_t;
 
+typedef struct{
+	user_date_t date;
+	user_time_t time;
+	char name[30];
+	char ip[20];
+	char action[10];
+	int conn_fd;
+}log_t;
 
 typedef struct{
 	int type;//要做什么
 	account_t user;
+	user_date_t date;
+	user_time_t time;
 	char name_to[30];
 	char filename[256];
 	namelist_t namelist;

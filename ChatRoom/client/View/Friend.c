@@ -20,8 +20,9 @@
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
 extern account_t gl_CurUser;
+extern data_t data_recv;
 
-void Friend_Menu(data_t data_recv,int conn_fd)
+void Friend_Menu(int conn_fd)
 {
 	char choice;
 	do {

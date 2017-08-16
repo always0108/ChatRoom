@@ -111,6 +111,101 @@ void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
 
 }
 
+void send_offline_message(data_t data_buf,int conn_fd)
+{
+    if(!check_name(data_buf.name_to))
+    {
+        send_note(conn_fd,"该用户不存在！");
+        return ;
+    }
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.name_to);
+    strcat(preserve,"/offlinedata/offlinenote");
+
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp = fopen(preserve,"a");
+    if(NULL==fp)
+    {
+        printf("open fail fail\n");
+        return ;
+    }
+    fwrite(&data_buf,sizeof(data_t),1,fp);
+    fclose(fp);
+}
+
+void check_offline_message(char *username,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/offlinenote");
+
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        printf("offlinenote does not exist\n");
+    }else{
+        usleep(10000);
+        send_note(conn_fd,"\n有离线消息\n");
+        fclose(fp);
+    }
+    
+
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/filelist");
+
+    printf("%s\n",preserve);
+
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        printf("offlinenote does not exist\n");
+        
+    }else{
+        usleep(10000);
+        send_note(conn_fd,"\n有离线文件\n");
+        fclose(fp);
+    }
+   
+}
+
+void read_offline_message(char *username,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/offlinenote");
+
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        printf("offlinenote does not exist\n");
+        return ;
+    }
+    data_t data_buf;
+    while(!feof(fp))
+    {
+        if(fread(&data_buf,sizeof(data_t),1,fp)>0)
+        {
+            data_buf.type=2;
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+                my_err("send",__LINE__);
+            }
+        }
+    }
+    remove(preserve);
+}
+
 
 //接收者给发送者回馈消息
 void chat_to(online_list_t list,data_t data_buf,int conn_fd)
@@ -144,7 +239,11 @@ void upload_file(data_t data_buf)
     
     int l=strlen(data_buf.filename);
     while(data_buf.filename[l-1]!='/')
+    {
         l--;
+        if(l==0)
+            break;
+    } 
     strcat(preserve,data_buf.filename+l);
     printf("%s\n",preserve);
 
@@ -162,6 +261,7 @@ void upload_file(data_t data_buf)
     }
 }
 
+//检测文件是否存在
 int check_file(char *filename,char *dirname)
 {
     DIR *dp;    
@@ -253,7 +353,8 @@ void download_icould_file(data_t data_buf,int conn_fd)
     }
 	else{
 		while((fread(data_buf.temp_buf,sizeof(char),500,fp)>0)){
-        	if(send(conn_fd,&data_buf,sizeof(data_t),0)<0)  
+            data_buf.type=11;
+            if(send(conn_fd,&data_buf,sizeof(data_t),0)<0)  
         	{  
             	printf("Send File:\t%s Failed\n", data_buf.filename);  
             	break;  
@@ -262,7 +363,6 @@ void download_icould_file(data_t data_buf,int conn_fd)
     	}
 		fclose(fp);
 	}
-
 }
 
 //在线发送文件
@@ -322,6 +422,203 @@ void send_online_file_assist(online_list_t list,data_t data_buf,int conn_fd)
     {
         send_note(conn_fd,"该用户已离线，请尝试发送离线文件\n");
     }
+}
+
+//离线发送文件
+void send_offline_file(data_t data_buf)
+{   
+    FILE *fp;
+    
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.name_to);
+    strcat(preserve,"/offlinedata/offlinefile/");
+    
+    int l=strlen(data_buf.filename);
+    while(data_buf.filename[l-1]!='/')
+    {
+        l--;
+        if(l==0)
+            break;
+    }    
+    strcat(preserve,data_buf.filename+l);
+    
+    printf("%s\n",preserve);
+
+    fp = fopen(preserve,"ab+");
+
+    if(NULL == fp)  
+    {  
+        printf("File:\t%s Can Not Open To Write\n",data_buf.filename);  
+        exit(1);  
+    }
+    else{
+        l=strlen(data_buf.temp_buf);
+        fwrite(data_buf.temp_buf,sizeof(char),l,fp);//注意缓冲区内如果没有用完可能有很多空子符
+        fclose(fp);
+    }
+}
+
+void send_offline_file_assist(data_t data_buf)
+{
+    FILE *fp;
+    
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.name_to);
+    strcat(preserve,"/offlinedata/filelist");
+
+    int l=strlen(data_buf.filename);
+    while(data_buf.filename[l-1]!='/')
+    {
+        l--;
+        if(l==0)
+            break;
+    } 
+    
+    printf("%s\n",preserve);
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        printf("open file fail\n");
+        return ;
+    }
+    data_buf.date=DateNow();
+    data_buf.time=TimeNow();
+    fwrite(&data_buf,sizeof(data_t),1,fp);
+
+    fclose(fp);
+}
+
+void read_offline_file_sender(char *username,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/filelist");
+
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        printf("offlinenote does not exist\n");
+        return ;
+    }
+    data_t data_buf;
+    while(!feof(fp))
+    {
+        if(fread(&data_buf,sizeof(data_t),1,fp)>0)
+        {
+            data_buf.type=1;
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+                my_err("send",__LINE__);
+            }
+        }
+    }
+}
+
+void download_offline_file(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/offlinedata/offlinefile/");
+    strcat(preserve,data_buf.filename);
+    
+    printf("%s\n",preserve);
+    
+    FILE *fp;
+    fp = fopen(preserve,"rb");
+    if(NULL == fp )  
+    {
+        send_note(conn_fd,"文件不存在");  
+        printf("File:%s Not Found\n", data_buf.filename);  
+    }
+	else{
+		while((fread(data_buf.temp_buf,sizeof(char),500,fp)>0)){
+            printf("send\n");
+            data_buf.type=11;
+            if(send(conn_fd,&data_buf,sizeof(data_t),0)<0)  
+        	{  
+            	printf("Send File:\t%s Failed\n", data_buf.filename);  
+            	break;  
+        	}  
+        	memset(data_buf.temp_buf,0,BUFSIZE);
+    	}
+		fclose(fp);
+	}
+}
+
+void see_offline_file(data_t data_buf,int conn_fd)
+{
+    DIR *dp;
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/offlinedata/offlinefile");
+    //printf("%s\n",preserve);
+
+    if((dp = opendir(preserve) )== NULL)
+    {
+        my_err("opendir",__LINE__);
+        send_note(conn_fd,"读取失败");
+        return ;
+    }
+
+    struct dirent *ptr;
+    data_buf.namelist.count=0;
+    while((ptr = readdir(dp)) != NULL){
+        if(ptr->d_name[0]!='.')
+        {
+            strcpy(data_buf.namelist.namelist_buf[data_buf.namelist.count],ptr->d_name);
+            data_buf.namelist.count++;
+            if(data_buf.namelist.count>=200)
+                break;      
+        }
+    }
+    qsort(data_buf.namelist.namelist_buf,data_buf.namelist.count,
+          sizeof(data_buf.namelist.namelist_buf[0]),cmp);
+    if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+        my_err("send",__LINE__);
+    }
+    
+}
+
+void remove_useless_file(char *username)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/filelist");
+
+    printf("%s\n",preserve);
+    
+    remove(preserve);
+
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/offlinefile/");
+    
+    DIR *dp;
+    
+    if((dp = opendir(preserve) )== NULL)
+    {
+        printf("open dir fail or dir does not exit\n");
+        return ;
+    }
+
+    struct dirent *ptr;
+    chdir(preserve);
+    while((ptr = readdir(dp)) != NULL){
+        if(ptr->d_name[0]!='.')
+        {
+            printf("%s\n",ptr->d_name);
+            remove(ptr->d_name);      
+        }
+    }
+    chdir("../../../../");
 }
 
 
@@ -441,7 +738,7 @@ void get_chathistroy(data_t data_buf,int conn_fd)
     fp = fopen(preserve,"r");
     if(NULL==fp)
     {
-        my_err("open file fail",__LINE__);
+        printf("open file fail\n");
         return ;
     }
 
@@ -458,6 +755,7 @@ void get_chathistroy(data_t data_buf,int conn_fd)
     return ;
 }
 
+//检查好友列表
 int check_friendlist(char *username,char *name_to)
 {
     char preserve[256];
@@ -639,7 +937,7 @@ int check_name(char *name)
     return 0;
 }
 
-//将好友信息写入文件
+//将消息记录写入文件
 int wirte_in_histroy(data_t data_buf)
 {
     histroy_t histroy;

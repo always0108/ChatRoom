@@ -11,7 +11,7 @@
 #include"../Common/common.h"
 
 //好友管理主菜单
-void Friend_Menu(data_t data_recv,int conn_fd);
+void Friend_Menu(int conn_fd);
 
 //获取好友列表
 void get_friendlist(int conn_fd);

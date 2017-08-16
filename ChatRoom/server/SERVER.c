@@ -35,11 +35,15 @@ void accept_in(int sock_fd);//服务器开始监听
 void sign_in(data_t data_buf,int conn_fd);//登录 1
 
 void sign_up(data_t data_buf,int conn_fd);//注册 2
+
 void init_user(char *username);//初始化用户文件夹
+
+void write_server_log(log_t log);
 
 
 //定义全局变量，用于存储登陆用户信息
 account_t gl_CurUser = { 0, 0, "Anonymous","" };
+
 online_list_t list;
 int listcount = 0;
 char recv_buf[1024];
@@ -75,6 +79,12 @@ void *thread(void *arg)
                         break;
                     }
                 }
+            log_t log;
+            strcpy(log.name,gl_CurUser.username); 
+            strcpy(log.action,"退出");
+            log.conn_fd=conn_fd;
+            write_server_log(log);
+            remove_useless_file(gl_CurUser.username);
 		    pthread_exit(0);
         }else{
             switch(data_buf.type)
@@ -131,6 +141,28 @@ void *thread(void *arg)
             case 16:
                     send_online_file_assist(list,data_buf,conn_fd);
                     break;
+            case 18:
+                    send_offline_message(data_buf,conn_fd);
+                    break;
+            case 19:
+                    read_offline_message(data_buf.user.username,conn_fd);
+                    break;
+            case 20:
+                    send_offline_file(data_buf);
+                    break;
+            case 21:
+                    send_offline_file_assist(data_buf);
+                    break;
+            case 22:
+                    read_offline_file_sender(data_buf.user.username,conn_fd);
+                    break;
+            case 23:
+                    download_offline_file(data_buf,conn_fd);
+                    break;
+            case 24:
+                    see_offline_file(data_buf,conn_fd);
+                    break;
+            
             }
         }   
     }
@@ -181,6 +213,15 @@ void accept_in(int sock_fd)
     int conn_fd;
     socklen_t cli_len;
     struct sockaddr_in cli_addr;
+    user_date_t date;
+    user_time_t time;
+    date=DateNow();
+    time=TimeNow();
+    FILE *fp;
+    fp = fopen("SERVER-LOG","a+");
+    fprintf(fp,"%4d-%02d-%02d\t%02d:%02d:%02d\t服务器启动\n",
+    date.year,date.month,date.day,time.hour,time.minute,time.second);
+    fclose(fp);
     cli_len = sizeof(struct sockaddr_in);
     while(1){
         //用accept接收客户端的请求，并返回连接套接字的用于收发数据
@@ -225,6 +266,13 @@ void sign_in(data_t data_buf,int conn_fd)
             printf("%d\n",pos->data.conn_fd);
             List_AddTail(list,pos);
             listcount++;
+            log_t log;
+            strcpy(log.name,data_buf.user.username);
+            strcpy(gl_CurUser.username,data_buf.user.username);
+            strcpy(log.action,"登录");
+            log.conn_fd=conn_fd;
+            write_server_log(log);
+            check_offline_message(gl_CurUser.username,conn_fd);
             return ;
 		}
     }else
@@ -266,8 +314,24 @@ void init_user(char *username)
     mkdir("offlinedata",0777);//离线数据
     mkdir("notehistroy",0777);//消息记录
     mkdir("icould",0777);//云盘
-    chdir("../../");	
+    chdir("offlinedata");
+    mkdir("offlinefile",0777);
+    chdir("../../../");	
 }
+
+void write_server_log(log_t log)
+{
+    FILE *fp;
+    fp = fopen("SERVER-LOG","a+");
+    log.date=DateNow();
+    log.time=TimeNow();
+    fprintf(fp,"%4d-%02d-%02d\t%02d:%02d:%02d\t",
+    log.date.year,log.date.month,log.date.day,
+    log.time.hour,log.time.minute,log.time.second);
+    fprintf(fp,"%-20s %4d\t%-8s\n",log.name,log.conn_fd,log.action);
+    fclose(fp);
+}
+
 
 int main(void)
 {

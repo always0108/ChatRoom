@@ -40,6 +40,8 @@ typedef struct{
 typedef struct{
 	int type;//要做什么
 	account_t user;
+	user_date_t date;
+	user_time_t time;
 	char name_to[30];
 	char filename[256];
 	namelist_t namelist;

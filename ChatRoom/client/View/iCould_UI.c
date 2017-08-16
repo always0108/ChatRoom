@@ -18,8 +18,9 @@
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
 extern account_t gl_CurUser;
+extern data_t data_recv;
 
-void iCould_Menu(data_t data_recv,int conn_fd)
+void iCould_Menu(int conn_fd)
 {
 	char choice;
 	do {

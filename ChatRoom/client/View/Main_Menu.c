@@ -14,6 +14,7 @@
 #include"iCould_UI.h"
 #include"Friend.h"
 #include"Sendfile.h"
+#include"Offlinecenter.h"
 
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
@@ -23,6 +24,7 @@ extern account_t gl_CurUser;
 
 int conn_fd;
 data_t data_recv;
+int flag=0;
 
 void *Main_Menu_accept(void)
 {
@@ -33,10 +35,11 @@ void *Main_Menu_accept(void)
     pthread_detach(pthread_self());
 	
 	while(1){
-        memset(&data_buf,0,sizeof(data_t));
-        if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
+		memset(&data_buf,0,sizeof(data_t));
+		if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
+			flag=1;
 			pthread_exit(0);
         }else
 		{
@@ -47,8 +50,18 @@ void *Main_Menu_accept(void)
 				case 7:
 						printf("\t\t\t%s\n",data_buf.temp_buf);
 						break;
-        	    case 3:	
-						printf("\t\t\t%s发来消息:",data_buf.user.username);
+				case 1:
+						printf("\n%4d-%02d-%02d\t%02d-%02d-%02d\n",
+						data_buf.date.year,data_buf.date.month,data_buf.date.day,
+						data_buf.time.hour,data_buf.time.minute,data_buf.time.second);
+						printf("%s发来离线文件:%s\n",data_buf.user.username,data_buf.filename);
+						break;
+				case 2:	
+						printf("\n\t\t\t%s发来离线消息:",data_buf.user.username);
+						printf("%s\n",data_buf.temp_buf);									
+						break;
+				case 3:	
+						printf("\n\t\t\t%s发来消息:",data_buf.user.username);
 						printf("%s\n",data_buf.temp_buf);									
 						break;
 				case 4: 
@@ -64,8 +77,12 @@ void *Main_Menu_accept(void)
 						printf("\n\t\t\t是否接受(y or n):\t");			
 						break;
 				case 9:
+				case 24:
 						system("clear");
-						printf("\n\t\t\t云端的文件如下:\n");
+						if(data_buf.type==9)
+							printf("\n\t\t\t云端的文件如下:\n");
+						else
+							printf("\n\t\t\t暂存的离线文件如下:\n");
 						printf("\n\t\t\t");
 						for(int i=0;i<data_buf.namelist.count;i++)
 						{
@@ -113,6 +130,11 @@ void Main_Menu(int fd)
 	
 	char choice;
 	do {
+		if(flag==1)
+		{
+			printf("\n\t\t\t与服务器断开连接\n");
+			break;
+		}
 		system("clear");
 		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
 		printf("\t\t\t==================================================================\n");
@@ -124,9 +146,11 @@ void Main_Menu(int fd)
 		printf("\t\t\t\t=>\t[4]好友管理\n");
 		printf("\t\t\t\t=>\t[5]在线传输文件\n");
 		printf("\t\t\t\t=>\t[6]查看聊天记录\n");
+		printf("\t\t\t\t=>\t[7]离线中心\n");
 		printf("\t\t\t\t=>\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
+		
 		choice = getche();
 		switch (choice) {
 			case '1':
@@ -136,16 +160,19 @@ void Main_Menu(int fd)
 					send_privacy(conn_fd);					
 					break;
 			case '3':
-					iCould_Menu(data_recv,conn_fd);
+					iCould_Menu(conn_fd);
 					break;
 			case '4':
-					Friend_Menu(data_recv,conn_fd);
+					Friend_Menu(conn_fd);
 					break;
 			case '5':  
 					send_online_file_assist(conn_fd);
 					break;
 			case '6':
 					get_chathistroy(conn_fd);
+					break;
+			case '7':
+					Offlinecenter_Menu(conn_fd);
 					break;
 			case 'y':
 					if(data_recv.type==8)
@@ -249,6 +276,7 @@ void send_privacy_assist(int conn_fd ,char *name)
 	}
 	getchar();
 }
+
 
 //接收向发送者回馈结果
 void chat_to(data_t data_temp,int conn_fd,char *string)
