@@ -162,8 +162,22 @@ void *thread(void *arg)
             case 24:
                     see_offline_file(data_buf,conn_fd);
                     break;
-            
-            }
+            case 25:
+                    group_init(data_buf,conn_fd);
+                    break;
+            case 26:
+                    group_add(data_buf,conn_fd);
+                    break;
+            case 27:
+                    show_group_member(data_buf, conn_fd);
+                    break;
+            case 28:
+                    chat_in_group(list,data_buf,conn_fd);
+                    break;
+            case 29:
+                    get_group_histroy(data_buf,conn_fd);
+                    break;
+        }
         }   
     }
 }

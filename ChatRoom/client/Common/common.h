@@ -38,10 +38,16 @@ typedef struct{
 }histroy_t;
 
 typedef struct{
+	char name[20];
+	int type;
+}group_t;
+
+typedef struct{
 	int type;//要做什么
 	account_t user;
 	user_date_t date;
 	user_time_t time;
+	group_t group;
 	char name_to[30];
 	char filename[256];
 	namelist_t namelist;

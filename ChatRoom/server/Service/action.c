@@ -992,3 +992,243 @@ int wirte_in_histroy(data_t data_buf)
     fclose(fp);
     return 0;
 }
+
+//初始化群
+void group_init(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    printf("%s\n",preserve);
+
+    FILE *fp1;
+    fp1 = fopen(preserve,"r");
+    if(fp1!=NULL)
+    {
+        send_note(conn_fd,"群名与其它群名重复");
+        return ;
+    }
+
+    FILE *fp;
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        send_note(conn_fd,"创建失败");
+        printf("open file fail\n");
+        return ;
+    }
+    data_buf.group.type=0;
+    fprintf(fp,"%30s\t%d\n",data_buf.user.username,data_buf.group.type);
+    
+    fclose(fp);
+    
+    strcpy(preserve,"./USR.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/grouplist");
+    
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        send_note(conn_fd,"创建失败");
+        printf("open file fail\n");
+        return ;
+    }
+    fprintf(fp,"%s\n",data_buf.group.name);
+    fclose(fp);
+
+    send_note(conn_fd,"创建成功");
+}
+
+//添加群成员
+void group_add(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    printf("%s\n",preserve);
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(fp==NULL)
+    {
+        send_note(conn_fd,"该群不存在");
+        return ;
+    }else{
+        fclose(fp);
+
+        fp = fopen(preserve,"a+");
+        if(NULL==fp)
+        {
+            send_note(conn_fd,"添加失败");
+            printf("open file fail\n");
+            return ;
+        }
+        fprintf(fp,"%30s\t%d\n",data_buf.user.username,data_buf.group.type);
+        fclose(fp);
+        
+        
+        strcpy(preserve,"./USR.dat/");
+        strcat(preserve,data_buf.temp_buf);
+        strcat(preserve,"/grouplist");
+        
+        fp = fopen(preserve,"a+");
+        if(NULL==fp)
+        {
+            send_note(conn_fd,"添加失败");
+            printf("open file fail\n");
+            return ;
+        }
+        fprintf(fp,"%s\n",data_buf.group.name);
+        fclose(fp);
+    
+        send_note(conn_fd,"添加成功");
+    }
+}
+
+//展示群成员
+void show_group_member(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    printf("%s\n",preserve);
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(fp==NULL)
+    {
+        send_note(conn_fd,"该群不存在");
+        return ;
+    }else{
+        data_buf.type=5;
+        while(!feof(fp))
+        {
+            fscanf(fp,"%30s\t%d\n",data_buf.temp_buf,&data_buf.group.type);
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+        		my_err("send",__LINE__);
+            }
+        }
+    }
+}
+
+//群内聊天
+void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    FILE *fp;
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        printf("open file fail\n");
+        return ;
+    }
+    while(!feof(fp))
+    {
+        fscanf(fp,"%30s\t%d\n",data_buf.name_to,&data_buf.group.type);
+        if(strcmp(data_buf.name_to,data_buf.user.username)==0)
+            continue;
+        int flag =0 ;
+        online_node_t *pos;
+        List_ForEach(list,pos)
+        {   
+            if(strcmp(pos->data.username,data_buf.name_to)==0)
+            {   
+                data_buf.type=0;   
+                send_note(pos->data.conn_fd,"\n\t\t\t有新的消息！\n");
+                if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                    send_note(conn_fd,"send fail");
+                    my_err("send",__LINE__);
+                }
+                flag = 1;
+                break;
+                }
+            }
+            if(flag == 0){
+                send_offline_message(data_buf,conn_fd); 
+            }
+    }
+    //写入群聊天记录
+    write_group_histroy(data_buf,conn_fd);
+}
+
+//群聊天记录
+void write_group_histroy(data_t data_buf,int conn_fd)
+{
+    histroy_t histroy;
+    strcpy(histroy.name,data_buf.user.username);
+    strcpy(histroy.content,data_buf.temp_buf);
+    histroy.date=DateNow();
+    histroy.time=TimeNow();
+    
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"histroy");
+
+    FILE *fp;
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        printf("open file fail\n");
+        return ;
+    }
+    fwrite(&histroy,sizeof(histroy_t),1,fp);
+    fclose(fp);
+}
+
+//读取群聊天记录
+void get_group_histroy(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"histroy");
+    
+    printf("%s\n",preserve);
+    
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        send_note(conn_fd,"暂无聊天记录");
+        printf("open file fail\n");
+        return ;
+    }
+    while(!feof(fp)){
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+        {
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+        		my_err("send",__LINE__);
+            }
+        }
+    }
+    fclose(fp);
+    return ;
+}
+
+void get_my_group(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/grouplist");
+    
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp=fopen(preserve,"r");
+    while(!feof(fp))
+    {
+    
+    }
+
+}
