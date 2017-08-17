@@ -19,12 +19,17 @@
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
 extern account_t gl_CurUser;
-extern data_t data_recv;
+extern int flag_exit;
 
 void iCould_Menu(int conn_fd)
 {
 	char choice;
 	do {
+		if(flag_exit==1)
+		{
+			printf("\n\t\t\t与服务器断开连接\n");
+			break;
+		}
 		system("clear");
 		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
 		printf("\t\t\t==================================================================\n");
@@ -59,28 +64,6 @@ void iCould_Menu(int conn_fd)
 			case '6':
 					remove_local_file();
 					break;
-			case 'y':
-					if(data_recv.type==8)
-					{
-						data_recv.type=0;
-						if(send(conn_fd,&data_recv,sizeof(data_t),0) < 0){
-							my_err("send",__LINE__);
-						}
-						chat_to(data_recv,conn_fd,"对方已接受你的好友请求\n");
-						printf("\n\t\t\t你们已经成为了好友\n");
-					}
-					PAUSE
-					memset(&data_recv,0,sizeof(data_t));
-					break;
-			case 'n':
-				if(data_recv.type == 8)
-				{	
-					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
-					printf("\n\t\t\t你拒绝了对方的好友请求\n");
-				}
-				PAUSE
-				memset(&data_recv,0,sizeof(data_t));
-				break;
 		}
 	}while ('r' != choice && 'R' != choice);
 }

@@ -23,4 +23,7 @@ void chat_to(data_t data_temp,int conn_fd,char *string);
 //获取聊天记录
 void get_chathistroy(int conn_fd);
 
+//抓取后5条聊天记录
+void *show_chat_message(void *arg);
+
 #endif

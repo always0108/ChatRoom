@@ -69,6 +69,7 @@ void *thread(void *arg)
         }else if(ret == 0){
             printf("%d退出连接\n",conn_fd);            
 		    close(conn_fd);
+            online_remind(list,gl_CurUser.username,"下线了");
             online_node_t *pos;
             if(listcount>0)
                 List_ForEach(list,pos)
@@ -85,7 +86,7 @@ void *thread(void *arg)
             log.conn_fd=conn_fd;
             write_server_log(log);
             remove_useless_file(gl_CurUser.username);
-		    pthread_exit(0);
+	    pthread_exit(0);
         }else{
             switch(data_buf.type)
             {
@@ -182,6 +183,9 @@ void *thread(void *arg)
                     break;
             case 31:
                     read_unread_message(data_buf.user.username,conn_fd);
+                    break;
+            case 32:
+                    show_message(data_buf,conn_fd);
                     break;
             }
         }   
@@ -293,6 +297,7 @@ void sign_in(data_t data_buf,int conn_fd)
             log.conn_fd=conn_fd;
             write_server_log(log);
             check_offline_message(gl_CurUser.username,conn_fd);
+            online_remind(list,gl_CurUser.username,"上线了");
             return ;
 		}
     }else

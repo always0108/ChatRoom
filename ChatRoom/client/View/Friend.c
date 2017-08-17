@@ -21,12 +21,17 @@
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
 extern account_t gl_CurUser;
-extern data_t data_recv;
+extern int flag_exit;
 
 void Friend_Menu(int conn_fd)
 {
 	char choice;
 	do {
+		if(flag_exit==1)
+		{
+			printf("\n\t\t\t与服务器断开连接\n");
+			break;
+		}
 		system("clear");
 		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
 		printf("\t\t\t==================================================================\n");
@@ -35,6 +40,8 @@ void Friend_Menu(int conn_fd)
 		printf("\t\t\t\t=>\t[1]查看好友列表\n");
 		printf("\t\t\t\t=>\t[2]添加好友\n");
 		printf("\t\t\t\t=>\t[3]删除好友\n");
+		printf("\t\t\t\t=>\t[4]私聊\n");
+		printf("\t\t\t\t=>\t[5]消息记录\n");
 		printf("\t\t\t\t=>\t[R]返回\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
@@ -49,27 +56,11 @@ void Friend_Menu(int conn_fd)
 			case '3':
 				remove_friend(conn_fd);
 				break;
-			case 'y':
-					if(data_recv.type==8)
-					{
-						data_recv.type=0;
-						if(send(conn_fd,&data_recv,sizeof(data_t),0) < 0){
-							my_err("send",__LINE__);
-						}
-						chat_to(data_recv,conn_fd,"对方已接受你的好友请求\n");
-						printf("\n\t\t\t你们已经成为了好友\n");
-					}
-					PAUSE
-					memset(&data_recv,0,sizeof(data_t));
-					break;
-			case 'n':
-				if(data_recv.type == 8)
-				{	
-					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
-					printf("\n\t\t\t你拒绝了对方的好友请求\n");
-				}
-				PAUSE
-				memset(&data_recv,0,sizeof(data_t));
+			case '4':
+				send_privacy(conn_fd);
+				break;
+			case '5':
+				get_chathistroy(conn_fd);
 				break;
 		}
 	}while ('r' != choice && 'R' != choice);

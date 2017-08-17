@@ -14,6 +14,7 @@
 #include"Sendfile.h"
 extern account_t gl_CurUser;
 extern data_t data_recv;
+extern int flag_exit;
 
 //发送在线文件询问
 void send_online_file_assist(int conn_fd)

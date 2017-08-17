@@ -12,8 +12,17 @@
 #include<sys/socket.h>
 #include<unistd.h>
 #include"../Common/common.h"
+#include<pthread.h>
 
 extern account_t gl_CurUser;
+
+
+int flag=0;
+
+struct s_info{
+    char name[30];
+    int conn_fd;
+}ts;
 
 //打招呼
 void send_all(int conn_fd)
@@ -33,9 +42,37 @@ void send_all(int conn_fd)
 }
 
 
+void *show_chat_message(void *arg)
+{
+	struct s_info *ts = (struct s_info*)arg;
+	int conn_fd=ts->conn_fd;
+	/*线程资源回收*/
+	pthread_detach(pthread_self());
+	
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	strcpy(data_buf.name_to,ts->name);
+	data_buf.name_to[strlen(data_buf.name_to)]='\0';
+	data_buf.type=32;
+	while(1)
+	{
+		if(flag==1)
+			break;
+		system("clear");
+		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+		}
+		sleep(10);
+	}
+	pthread_exit(0);
+}
+
 //私聊辅助
 void send_privacy_assist(int conn_fd ,char *name)
 {
+	flag=0;
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
@@ -43,8 +80,13 @@ void send_privacy_assist(int conn_fd ,char *name)
 	strcpy(data_buf.name_to,name);
 	data_buf.name_to[strlen(data_buf.name_to)]='\0';
 	data_buf.type=15;
+	pthread_t thid;
+	
+	strcpy(ts.name,data_buf.name_to);
+	ts.conn_fd=conn_fd;
+	pthread_create(&thid,NULL,show_chat_message,(void *)&ts);
 	while(1){
-		printf("\n请输入要发送的内容：");
+		//printf("\n请输入要发送的内容：");
 		fgets(data_buf.temp_buf,BUFSIZE,stdin);
 		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
 		if(strcmp(data_buf.temp_buf,"quit")==0)
@@ -55,6 +97,7 @@ void send_privacy_assist(int conn_fd ,char *name)
 		usleep(1000);
 		printf("send sucess\n");
 	}
+	flag=1;
 	getchar();
 }
 

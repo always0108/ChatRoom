@@ -18,11 +18,17 @@
 #include"Group.h"
 
 extern account_t gl_CurUser;
+extern int flag_exit;
 
 void Group_Menu(int conn_fd)
 {
 	char choice;
 	do {
+		if(flag_exit==1)
+		{
+			printf("\n\t\t\t与服务器断开连接\n");
+			break;
+		}
 		system("clear");
 		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
 		printf("\t\t\t==================================================================\n");

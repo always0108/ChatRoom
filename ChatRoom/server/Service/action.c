@@ -52,7 +52,7 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
     }
     int flag = 0;
     online_node_t *pos;
-    List_ForEach(list,pos)//数据不全,丢失? ? ? ? ? ? ?（解决）
+    List_ForEach(list,pos)
     {   
         if(strcmp(pos->data.username,data_buf.name_to)==0)
         {   if(pos->data.conn_fd == conn_fd)
@@ -66,38 +66,17 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
             break;
         }
     }
-    if(flag == 1){
-    //写入双方消息记录
     wirte_in_histroy(data_buf);
+    if(flag == 0)
+    {
+        send_offline_message(data_buf,conn_fd);
     }
-    else 
-        send_note(conn_fd,"send fail");
 }
 
 void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
 {
-    int flag = 0;
-    online_node_t *pos;
-    List_ForEach(list,pos)
-    {   
-        if(strcmp(pos->data.username,data_buf.name_to)==0)
-        {   if(pos->data.conn_fd == conn_fd)
-            {
-                send_note(conn_fd,"you can't send to yourself");
-                continue ;
-            }    
-            save_in_newscenter(data_buf);//写入消息盒子
-            flag = 1;
-            break;
-        }
-    }
-    if(flag == 1){
-    //写入消息记录
+    //无论在线与否都写入消息记录
     wirte_in_histroy(data_buf);
-    }
-    else 
-        send_note(conn_fd,"send fail");
-
 }
 //发送离线消息
 void send_offline_message(data_t data_buf,int conn_fd)
@@ -176,25 +155,49 @@ void read_offline_message(char *username,int conn_fd)
 
     printf("%s\n",preserve);
 
-    FILE *fp;
-    fp = fopen(preserve,"r");
+    char pretemp[256];
+    strcpy(pretemp,preserve);
+    strcat(pretemp,"temp");
+    
+    printf("%s\n",preserve);
+    printf("%s\n",pretemp);
+
+    rename(preserve,pretemp);
+
+    FILE *fp,*fpsave;
+    fp = fopen(pretemp,"r");
+    fpsave = fopen(preserve,"w");
     if(NULL==fp)
     {
         printf("offlinenote does not exist\n");
         return ;
     }
+    if(NULL == fpsave)
+    {
+        printf("open savefile fail\n");
+        return ;
+    }
+
     data_t data_buf;
+    if((fread(&data_buf,sizeof(data_t),1,fp)>0)&&!feof(fp))
+    {
+        if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+            my_err("send",__LINE__);
+        }
+    }
+    else
+    {
+        send_note(conn_fd,"暂无新消息");
+        return ;
+    }
     while(!feof(fp))
     {
         if(fread(&data_buf,sizeof(data_t),1,fp)>0)
         {
-            data_buf.type=2;
-            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
-                my_err("send",__LINE__);
-            }
+            fwrite(&data_buf,sizeof(data_t),1,fpsave);
         }
     }
-    remove(preserve);
+    remove(pretemp);
 }
 
 
@@ -585,6 +588,12 @@ void remove_useless_file(char *username)
 
     printf("%s\n",preserve);
     
+    remove(preserve);
+
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/offlinedata/offlinenote");
+
     remove(preserve);
 
     strcpy(preserve,"./USER.dat/");
@@ -1051,6 +1060,17 @@ void group_add(data_t data_buf,int conn_fd)
         send_note(conn_fd,"该群不存在");
         return ;
     }else{
+        char name[30];
+        int type;
+        while(!feof(fp))
+        {
+            fscanf(fp,"%30s\t%d\n",name,&type);
+            if(strcmp(data_buf.temp_buf,name)==0)
+            {
+                send_note(conn_fd,"该成员已经在该群");
+                return ;
+            }
+        }
         fclose(fp);
 
         fp = fopen(preserve,"a+");
@@ -1313,4 +1333,99 @@ void read_unread_message(char *username,int conn_fd)
         }
     }
     remove(pretemp);
+}
+
+void show_message(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/notehistroy/");
+    strcat(preserve,data_buf.name_to);
+
+    printf("%s\n",preserve);
+    
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        printf("open file fail\n");
+        return ;
+    }
+    int i=0;
+    while(!feof(fp))
+    {
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+            i++;
+    }
+    
+    if(i<4)
+    {
+        rewind(fp);
+        while(!feof(fp)){
+            if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+            {
+                if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                    send_note(conn_fd,"send fail");
+        		    my_err("send",__LINE__);
+                }
+            }
+        }
+        fclose(fp);
+        return ;
+    }
+
+    fseek(fp,-(sizeof(histroy_t)*4),SEEK_END);
+    while(!feof(fp)){
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+        {
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+                my_err("send",__LINE__);
+            }
+        }
+    }
+    fclose(fp);
+    return ;
+}
+
+
+//好友上下线提醒
+void online_remind(online_list_t list,char *username,char *string)
+{
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/friendlist");
+
+    printf("%s\n",preserve);
+
+    FILE *fp;
+    fp = fopen(preserve,"rb");
+    if(NULL == fp)
+    {
+        my_err("open file fail",__LINE__);
+        return;
+    }
+    char name[30];
+    while(!feof(fp))
+    {
+        if(fread(&name,30,1,fp)>0)
+        judge_online(list,username,name,string);
+    }  
+    fclose(fp);      
+}
+
+//判断好友是否在线
+void judge_online(online_list_t list,char *username,char *name,char *string)
+{
+    online_node_t *pos;
+    List_ForEach(list,pos)
+    {   
+        if(strcmp(name,pos->data.username)==0)
+        {   
+            send_note(pos->data.conn_fd,username);
+            send_note(pos->data.conn_fd,string); 
+        }
+    }
 }
