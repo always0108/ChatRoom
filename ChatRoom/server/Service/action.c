@@ -1045,8 +1045,12 @@ void group_init(data_t data_buf,int conn_fd)
 
 //添加群成员
 void group_add(data_t data_buf,int conn_fd)
-
 {
+    if(!check_name(data_buf.temp_buf))
+    {
+        send_note(conn_fd,"该用户不存在\n");
+        return ;
+    }
     char preserve[256];
     strcpy(preserve,"./GROUP.dat/");
     strcat(preserve,data_buf.group.name);
@@ -1134,6 +1138,7 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
         printf("open file fail\n");
         return ;
     }
+
     while(!feof(fp))
     {
         fscanf(fp,"%30s\t%d\n",data_buf.name_to,&data_buf.group.type);
@@ -1153,18 +1158,18 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
                 }
                 flag = 1;
                 break;
-                }
             }
-            if(flag == 0){
-                send_offline_message(data_buf,conn_fd); 
+        }
+        if(flag == 0){
+            send_offline_message(data_buf,conn_fd); 
             }
     }
     //写入群聊天记录
-    write_group_histroy(data_buf,conn_fd);
+    write_group_histroy(data_buf);
 }
 
 //群聊天记录
-void write_group_histroy(data_t data_buf,int conn_fd)
+void write_group_histroy(data_t data_buf)
 {
     histroy_t histroy;
     strcpy(histroy.name,data_buf.user.username);
@@ -1209,15 +1214,15 @@ void get_group_histroy(data_t data_buf,int conn_fd)
     while(!feof(fp)){
         if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
         {
-            printf("\n\t\t\t%s\t",data_buf.histroy.name);
+            /*printf("\n\t\t\t%s\t",data_buf.histroy.name);
             printf("%4d-%02d-%02d\t%02d:%02d:%02d\n",
             data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day,
             data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
-            printf("%s\n",data_buf.histroy.content);
-            /*if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+            printf("%s\n",data_buf.histroy.content);*/
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
                 send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
-            }*/
+            }
         }
     }
     fclose(fp);

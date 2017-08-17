@@ -76,7 +76,7 @@ void show_group_member(data_t data_buf,int conn_fd);//展示群成员 27
 
 void chat_in_group(online_list_t list,data_t data_buf,int conn_fd);//群内聊天 28
 
-void write_group_histroy(data_t data_buf,int conn_fd);//群聊天记录
+void write_group_histroy(data_t data_buf);//群聊天记录
 
 void get_group_histroy(data_t data_buf,int conn_fd);//读取群聊天记录 29
 

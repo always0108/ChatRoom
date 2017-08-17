@@ -117,6 +117,7 @@ void *Main_Menu_accept(void)
 						printf("\n\t\t\t%-30s\t",data_buf.namelist.namelist_buf[i]);
 					break;
 				case 13:
+				case 29:
 					printf("\n\t\t\t%s\t",data_buf.histroy.name);
 					printf("%4d-%02d-%02d\t",data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day);
 					printf("%02d:%02d:%02d\n",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
