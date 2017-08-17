@@ -26,7 +26,7 @@ void send_online_file_assist(int conn_fd)
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
 	printf("\n\n\t\t\t请输入你要传送的文件的文件名：");
-	fgets(data_buf.filename,30,stdin);
+	fgets(data_buf.filename,256,stdin);
 	data_buf.filename[strlen(data_buf.filename)-1]='\0';
 	data_buf.type=16;
 	FILE *fp;

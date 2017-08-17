@@ -1,8 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Main_Menu.h"
-#include "../Common/conio.h"
-#include "../Common/common.h"
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<unistd.h>
@@ -11,20 +8,23 @@
 #include<arpa/inet.h>
 #include<pthread.h>
 #include<dirent.h>
+#include "Main_Menu.h"
+#include "../Common/conio.h"
+#include "../Common/common.h"
 #include"iCould_UI.h"
 #include"Friend.h"
 #include"Sendfile.h"
 #include"Offlinecenter.h"
+#include"Group.h"
+#include"chat.h"
 
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
 
-pthread_mutex_t mutex;
-pthread_cond_t cond;
 extern account_t gl_CurUser;
+data_t data_recv;
+int flag_exit=0;
 
 int conn_fd;
-data_t data_recv;
-int flag=0;
 
 void *Main_Menu_accept(void)
 {
@@ -39,7 +39,7 @@ void *Main_Menu_accept(void)
 		if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
-			flag=1;
+			flag_exit=1;
 			pthread_exit(0);
         }else
 		{
@@ -90,7 +90,8 @@ void *Main_Menu_accept(void)
 						break;   
 				case 8:
 						printf("\n\t\t\t%s请求加好友\n",data_buf.user.username);
-						printf("\n\t\t\t是否接受(y or n):\t");			
+						printf("\n\t\t\t是否接受(y or n):");
+						printf("按回车来处理\n");
 						break;
 				case 9:
 				case 24:
@@ -129,6 +130,7 @@ void *Main_Menu_accept(void)
 					break;
 				case 16:
 					printf("\n%s要向你传输文件:(y or n)",data_buf.user.username);
+					printf("按回车来处理\n");
 					break;
 				case 17:
 					printf("------------\n开始传输文件\n-----------\n");
@@ -150,7 +152,7 @@ void Main_Menu(int fd)
 	
 	char choice;
 	do {
-		if(flag==1)
+		if(flag_exit==1)
 		{
 			printf("\n\t\t\t与服务器断开连接\n");
 			break;
@@ -168,6 +170,7 @@ void Main_Menu(int fd)
 		printf("\t\t\t\t=>\t[6]查看聊天记录\n");
 		printf("\t\t\t\t=>\t[7]离线中心\n");
 		printf("\t\t\t\t=>\t[8]群中心\n");
+		printf("\t\t\t\t=>\t[9]消息盒子\n");
 		printf("\t\t\t\t=>\t[q]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
@@ -198,6 +201,41 @@ void Main_Menu(int fd)
 			case '8':
 					Group_Menu(conn_fd);
 					break;
+			case '9':
+					messagebox_Menu(conn_fd);
+					break;
+		}
+	}while ('q' != choice);
+}
+
+
+
+void messagebox_Menu(int conn_fd)
+{
+	char choice;
+	do {
+		if(flag_exit==1)
+		{
+			printf("\n\t\t\t与服务器断开连接\n");
+			break;
+		}
+		system("clear");
+		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t         **************** 消息盒子 ****************         \n");
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t\t=>\t[1]读取一条消息\n");
+		printf("\t\t\t\t=>\t[y]接受\n");
+		printf("\t\t\t\t=>\t[n]拒绝\n");
+		printf("\t\t\t\t=>\t[r]返回\n");
+		printf("\n\t\t\t==================================================================\n");
+		printf("\t\t\t请输入你的选择:");
+		
+		choice = getche();
+		switch (choice) {
+			case '1':
+					read_unread_message(conn_fd);
+					break;
 			case 'y':
 					if(data_recv.type==8)
 					{
@@ -205,7 +243,7 @@ void Main_Menu(int fd)
 						if(send(conn_fd,&data_recv,sizeof(data_t),0) < 0){
 							my_err("send",__LINE__);
 						}
-						chat_to(data_recv,conn_fd,"对方已接受你的好友请求\n");
+						chat_to(data_recv,conn_fd,"\n对方已接受你的好友请求\n");
 						printf("\n\t\t\t你们已经成为了好友\n");
 					}else if(data_recv.type == 4){
 						printf("\n%s私聊你:",data_recv.user.username);
@@ -215,16 +253,14 @@ void Main_Menu(int fd)
 					{
 						printf("\n\t\t\t开始接收......\n");
 						recive_online_file_assist(data_recv,conn_fd);
-						
-						
 					}
 					PAUSE
 					memset(&data_recv,0,sizeof(data_t));
 					break;
-			case 'n':
+		case 'n':
 				if(data_recv.type == 8)
 				{	
-					chat_to(data_recv,conn_fd,"对方拒绝了你的请求\n");
+					chat_to(data_recv,conn_fd,"\n对方拒绝了你的请求\n");
 					printf("\n\t\t\t你拒绝了对方的好友请求\n");
 				}else if(data_recv.type == 16)
 				{
@@ -234,286 +270,18 @@ void Main_Menu(int fd)
 				memset(&data_recv,0,sizeof(data_t));
 				break;
 		}
-	}while ('q' != choice);
+	}while ('r' != choice);
+
+
 }
 
-//群聊
-void send_all(int conn_fd)
+void read_unread_message(int conn_fd)
 {
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\n\t\t\t请输入你要发送的信息：");
-	fgets(data_buf.temp_buf,BUFSIZE,stdin);
-	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-	data_buf.type=3;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    	my_err("send",__LINE__);
-    }
-	getchar();
-}
-
-//私聊
-void send_privacy(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入你要私聊人名字：");
-	fgets(data_buf.name_to,30,stdin);
-	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
-	data_buf.type=4;
-	system("clear");
-	printf("\n请输入要发送的内容：");
-	fgets(data_buf.temp_buf,BUFSIZE,stdin);
-	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-	}
-	printf("send sucess\n");
-	send_privacy_assist(conn_fd ,data_buf.name_to);
-}
-
-//私聊辅助
-void send_privacy_assist(int conn_fd ,char *name)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	strcpy(data_buf.name_to,name);
-	data_buf.name_to[strlen(data_buf.name_to)]='\0';
-	data_buf.type=15;
-	while(1){
-		printf("\n请输入要发送的内容：");
-		fgets(data_buf.temp_buf,BUFSIZE,stdin);
-		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-		if(strcmp(data_buf.temp_buf,"quit")==0)
-			break;
-		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-		}
-		usleep(1000);
-		printf("send sucess\n");
-	}
-	getchar();
-}
-
-
-//接收向发送者回馈结果
-void chat_to(data_t data_temp,int conn_fd,char *string)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.name_to,data_temp.user.username);
-	data_buf.name_to[strlen(data_buf.name_to)]='\0';
-	strcpy(data_buf.temp_buf,string);
-	data_buf.temp_buf[strlen(data_buf.temp_buf)]='\0';
-	data_buf.type=7;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-    	my_err("send",__LINE__);
-    }
-}
-
-
-void Group_Menu(int conn_fd)
-{
-	char choice;
-	do {
-		system("clear");
-		printf("\t\t\t用户名：\t%s\n",gl_CurUser.username);
-		printf("\t\t\t==================================================================\n");
-		printf("\t\t\t         **************** happy chatroom ****************         \n");
-		printf("\t\t\t==================================================================\n");
-		printf("\t\t\t\t=>\t[1]建立群\n");
-		printf("\t\t\t\t=>\t[2]添加群成员\n");
-		printf("\t\t\t\t=>\t[3]群成员列表\n");
-		printf("\t\t\t\t=>\t[4]群内聊天\n");
-		printf("\t\t\t\t=>\t[5]群消息记录\n");
-		printf("\t\t\t\t=>\t[6]我的群\n");
-		printf("\t\t\t\t=>\t[q]退出\n");
-		printf("\n\t\t\t==================================================================\n");
-		printf("\t\t\t请输入你的选择:");
-		choice = getche();
-		switch (choice) {
-			case '1':
-					group_init(conn_fd);
-					break;
-			case '2':
-					group_add(conn_fd);
-					break;
-
-			case '3':
-					show_group_member(conn_fd);
-					break;
-			case '4':
-					chat_in_group(conn_fd);
-					break;
-			case '5':
-					get_group_histroy(conn_fd);
-					break;
-			case '6':
-					get_my_group(conn_fd);
-					break;
-		}
-	}while ('q' != choice);
-
-
-}
-
-
-
-//获取聊天记录
-void get_chathistroy(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\n\t\t\t你要查询与哪个好友的消息记录?\n");
-	printf("\n\t\t\t请输入名称： ");
-	fgets(data_buf.name_to,30,stdin);
-	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
-	data_buf.type=13;
-	system("clear");
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	getchar();
-}
-
-//初始化群
-void group_init(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入要建立的群名:");
-	fgets(data_buf.group.name,BUFSIZE,stdin);
-	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
-	data_buf.type=25;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	getchar();
-}
-
-//添加成员
-void group_add(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入你添加成员的群名:");
-	fgets(data_buf.group.name,BUFSIZE,stdin);
-	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
-	data_buf.type=26;
-	system("clear");
-	printf("\t\t\t==================================================================\n");
-	printf("\t\t\t         **************** 添加成员 ****************         \n");
-	printf("\t\t\t==================================================================\n");
-	while(1)
-	{
-		printf("请输入你要添加人的名称:");
-		fgets(data_buf.temp_buf,BUFSIZE,stdin);
-		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-		if(strcmp(data_buf.temp_buf,"quit")==0)
-			break;
-		printf("请输入他的权限(1普通用户2管理员)：");
-		scanf("%d",&data_buf.group.type);
-		getchar();
-		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-		}
-		usleep(10000);
-	}
-	getchar();
-}
-
-//列出群成员
-void show_group_member(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入要查看的群名:");
-	fgets(data_buf.group.name,BUFSIZE,stdin);
-	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
-	data_buf.type=27;
-	system("clear");
-	printf("\t\t\t==================================================================\n");
-	printf("\t\t\t         ****************   %s  ****************         \n",data_buf.group.name);
-	printf("\t\t\t         **************** 群成员 ****************         \n");
-	printf("\t\t\t==================================================================\n");
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	getchar();
-}
-
-//群内聊天
-void chat_in_group(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入要查看的群名:");
-	fgets(data_buf.group.name,BUFSIZE,stdin);
-	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
-	data_buf.type=28;
-	while(1){
-		printf("\n请输入要发送的内容：");
-		fgets(data_buf.temp_buf,BUFSIZE,stdin);
-		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-		if(strcmp(data_buf.temp_buf,"quit")==0)
-			break;
-		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-		}
-		usleep(1000);
-		printf("send sucess\n");
-	}
-	getchar();
-}
-
-//获取群历史消息
-void get_group_histroy(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入要查看的群名:");
-	fgets(data_buf.group.name,BUFSIZE,stdin);
-	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
-	data_buf.type=29;
-	system("clear");
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	getchar();
-	
-
-}
-
-//获得有我在的所有群名
-void get_my_group(int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	data_buf.type=30;
-	system("clear");
-	printf("\t\t\t==================================================================\n");
-	printf("\t\t\t         **************** 我的群 ****************         \n");
-	printf("\t\t\t==================================================================\n");
+	data_buf.type=31;
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 		my_err("send",__LINE__);
 	}

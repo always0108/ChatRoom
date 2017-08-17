@@ -82,5 +82,9 @@ void get_group_histroy(data_t data_buf,int conn_fd);//读取群聊天记录 29
 
 void get_my_group(data_t data_buf,int conn_fd);//读取群成员列表 30
 
+void save_in_newscenter(data_t data_buf);//将消息存入消息盒子
+
+void read_unread_message(char *username,int conn_fd);//读取消息盒子中的信息
+
 
 #endif

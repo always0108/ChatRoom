@@ -180,7 +180,9 @@ void *thread(void *arg)
             case 30:
                     get_my_group(data_buf,conn_fd);
                     break;
-        
+            case 31:
+                    read_unread_message(data_buf.user.username,conn_fd);
+                    break;
             }
         }   
     }

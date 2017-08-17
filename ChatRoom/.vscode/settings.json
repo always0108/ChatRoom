@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "math.h": "c",
+        "stdlib.h": "c",
+        "common.h": "c",
+        "main_menu.h": "c",
+        "errno.h": "c"
     }
 }

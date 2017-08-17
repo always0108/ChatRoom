@@ -12,6 +12,7 @@
 #include<dirent.h>
 #include"../Common/conio.h"
 #include"Main_Menu.h"
+#include"chat.h"
 #include<sys/types.h>
 #include<sys/socket.h>
 

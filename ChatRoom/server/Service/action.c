@@ -26,7 +26,7 @@ int cmp(const void *a, const void *b)
      return *(char*)a - *(char*)b;  
 }   
 
-//群聊
+//打招呼
 void send_all(online_list_t list,data_t data_buf,int conn_fd)
 {
     online_node_t *pos;
@@ -35,12 +35,8 @@ void send_all(online_list_t list,data_t data_buf,int conn_fd)
         if(pos->data.conn_fd != conn_fd)
         {   
             send_note(pos->data.conn_fd,"\n\n\t\t\t有新的消息！\n");
-
-            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){  
-                    send_note(conn_fd,"\n\n\t\t\tsend fail！");
-                    break;
-                    my_err("send",__LINE__);
-    	    }
+            strcpy(data_buf.name_to,pos->data.username);
+            save_in_newscenter(data_buf);
         }
     }
     send_note(conn_fd,"send sucess");
@@ -65,17 +61,13 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
                 continue ;
             }    
             send_note(pos->data.conn_fd,"\n\t\t\t有新的消息！\n");
-            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-                send_note(conn_fd,"send fail");
-        		my_err("send",__LINE__);
-            }
-            //给对方写入消息记录
+            save_in_newscenter(data_buf);//存到消息盒子
             flag = 1;
             break;
         }
     }
     if(flag == 1){
-    //给自己写入消息记录
+    //写入双方消息记录
     wirte_in_histroy(data_buf);
     }
     else 
@@ -94,10 +86,7 @@ void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
                 send_note(conn_fd,"you can't send to yourself");
                 continue ;
             }    
-            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-                send_note(conn_fd,"send fail");
-        		my_err("send",__LINE__);
-            }
+            save_in_newscenter(data_buf);//写入消息盒子
             flag = 1;
             break;
         }
@@ -110,7 +99,7 @@ void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
         send_note(conn_fd,"send fail");
 
 }
-
+//发送离线消息
 void send_offline_message(data_t data_buf,int conn_fd)
 {
     if(!check_name(data_buf.name_to))
@@ -136,6 +125,7 @@ void send_offline_message(data_t data_buf,int conn_fd)
     fclose(fp);
 }
 
+//上线检查离线是否存在
 void check_offline_message(char *username,int conn_fd)
 {
     char preserve[256];
@@ -176,6 +166,7 @@ void check_offline_message(char *username,int conn_fd)
    
 }
 
+//读取离线消息
 void read_offline_message(char *username,int conn_fd)
 {
     char preserve[256];
@@ -409,11 +400,10 @@ void send_online_file_assist(online_list_t list,data_t data_buf,int conn_fd)
             {
                 send_note(conn_fd,"you can't send to yourself");
                 continue ;
-            }    
-            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-                send_note(conn_fd,"send fail");
-        		my_err("send",__LINE__);
-            }
+            }  
+            printf("---------------\n");  
+            send_note(pos->data.conn_fd,"新的请求");
+            save_in_newscenter(data_buf);
             flag=1;
             break;
         }
@@ -672,10 +662,7 @@ void add_friend(online_list_t list,data_t data_buf,int conn_fd)
                 continue ;
             }       
             send_note(pos->data.conn_fd,"\n\n\t\t\t有新的请求！\n");
-            if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-                send_note(conn_fd,"send fail");
-                my_err("send",__LINE__);
-            }
+            save_in_newscenter(data_buf);
             break ;
             return ;
             }
@@ -1214,11 +1201,6 @@ void get_group_histroy(data_t data_buf,int conn_fd)
     while(!feof(fp)){
         if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
         {
-            /*printf("\n\t\t\t%s\t",data_buf.histroy.name);
-            printf("%4d-%02d-%02d\t%02d:%02d:%02d\n",
-            data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day,
-            data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
-            printf("%s\n",data_buf.histroy.content);*/
             if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
                 send_note(conn_fd,"send fail");
         		my_err("send",__LINE__);
@@ -1251,4 +1233,84 @@ void get_my_group(data_t data_buf,int conn_fd)
         }
     }
     fclose(fp);
+}
+
+
+//将消息存到消息中心
+void save_in_newscenter(data_t data_buf)
+{
+    FILE *fp;
+    
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.name_to);
+    strcat(preserve,"/newslist");
+    
+    printf("%s\n",preserve);
+    
+    fp = fopen(preserve,"a+");
+    if(NULL==fp)
+    {
+        printf("open file fail\n");
+        return ;
+    }
+    data_buf.date=DateNow();
+    data_buf.time=TimeNow();
+    fwrite(&data_buf,sizeof(data_t),1,fp);
+    fclose(fp);
+}
+
+
+//读取一条未读消息
+void read_unread_message(char *username,int conn_fd)
+{
+    printf("acess in\n");
+    char preserve[256];
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,username);
+    strcat(preserve,"/newslist");
+
+    char pretemp[256];
+    strcpy(pretemp,preserve);
+    strcat(pretemp,"temp");
+    
+    printf("%s\n",preserve);
+    printf("%s\n",pretemp);
+
+    rename(preserve,pretemp);
+
+    FILE *fp,*fpsave;
+    fp = fopen(pretemp,"r");
+    fpsave = fopen(preserve,"w");
+    if(NULL==fp)
+    {
+        printf("news does not exist\n");
+        return ;
+    }
+    if(NULL == fpsave)
+    {
+        printf("open savefile fail\n");
+        return ;
+    }
+
+    data_t data_buf;
+    if((fread(&data_buf,sizeof(data_t),1,fp)>0)&&!feof(fp))
+    {
+        if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
+            my_err("send",__LINE__);
+        }
+    }
+    else
+    {
+        send_note(conn_fd,"暂无新消息");
+        return ;
+    }
+    while(!feof(fp))
+    {
+        if(fread(&data_buf,sizeof(data_t),1,fp)>0)
+        {
+            fwrite(&data_buf,sizeof(data_t),1,fpsave);
+        }
+    }
+    remove(pretemp);
 }

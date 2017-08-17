@@ -15,6 +15,7 @@
 #include"../Common/conio.h"
 #include"Main_Menu.h"
 #include"Friend.h"
+#include"chat.h"
 
 
 #define PAUSE printf("\t\t\tPress Enter key to continue..."); fgetc(stdin);
