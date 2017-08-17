@@ -12,6 +12,7 @@
 #include<sys/socket.h>
 #include<unistd.h>
 #include<errno.h>
+#include<pthread.h>
 #include"../Common/conio.h"
 #include"../Common/common.h"
 #include"Account_UI.h"
@@ -19,6 +20,13 @@
 
 extern account_t gl_CurUser;
 extern int flag_exit;
+
+int flag;
+
+struct s_info{
+    char name[30];
+    int conn_fd;
+}ts;
 
 void Group_Menu(int conn_fd)
 {
@@ -141,6 +149,36 @@ void show_group_member(int conn_fd)
 	getchar();
 }
 
+
+void *show_group_message(void *arg)
+{
+	struct s_info *ts = (struct s_info*)arg;
+	int conn_fd=ts->conn_fd;
+	/*线程资源回收*/
+	pthread_detach(pthread_self());
+	
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.group.name,ts->name);
+	data_buf.group.name[strlen(data_buf.group.name)]='\0';
+	data_buf.type=34;
+	
+	while(1)
+	{
+		if(flag == 1)
+			break;
+		system("clear");
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
+		printf("\t\t\t==================================================================\n");
+		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+		}
+		sleep(6);
+	}
+	pthread_exit(0);
+}
+
 //群内聊天
 void chat_in_group(int conn_fd)
 {
@@ -148,12 +186,33 @@ void chat_in_group(int conn_fd)
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
 	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	printf("\n\t\t\t请输入要查看的群名:");
+	printf("\n\t\t\t请输入进入聊天的群名:");
 	fgets(data_buf.group.name,BUFSIZE,stdin);
 	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
 	data_buf.type=28;
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+		my_err("send",__LINE__);
+	}
+	chat_in_group_assist(data_buf.group.name,conn_fd);
+}
+
+void chat_in_group_assist(char *groupname,int conn_fd)
+{
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	strcpy(data_buf.group.name,groupname);
+	data_buf.group.name[strlen(data_buf.group.name)]='\0';
+	data_buf.type=33;
+	pthread_t thid;
+	
+	strcpy(ts.name,groupname);
+	ts.conn_fd=conn_fd;
+	pthread_create(&thid,NULL,show_group_message,(void *)&ts);
+	flag = 0;
 	while(1){
-		printf("\n请输入要发送的内容：");
+		//printf("\n请输入要发送的内容：");
 		fgets(data_buf.temp_buf,BUFSIZE,stdin);
 		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
 		if(strcmp(data_buf.temp_buf,"quit")==0)
@@ -161,11 +220,14 @@ void chat_in_group(int conn_fd)
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		usleep(1000);
-		printf("send sucess\n");
 	}
+	flag = 1 ;
+	pthread_cancel(thid);
 	getchar();
 }
+
+
+
 
 //获取群历史消息
 void get_group_histroy(int conn_fd)

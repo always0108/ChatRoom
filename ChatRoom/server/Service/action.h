@@ -76,7 +76,9 @@ void show_group_member(data_t data_buf,int conn_fd);//展示群成员 27
 
 void chat_in_group(online_list_t list,data_t data_buf,int conn_fd);//群内聊天 28
 
-void write_group_histroy(data_t data_buf);//群聊天记录
+void chat_in_group_assist(data_t data_buf,int conn_fd);
+
+void  write_group_histroy(data_t data_buf);//群聊天记录
 
 void get_group_histroy(data_t data_buf,int conn_fd);//读取群聊天记录 29
 
@@ -87,6 +89,8 @@ void save_in_newscenter(data_t data_buf);//将消息存入消息盒子
 void read_unread_message(char *username,int conn_fd);//读取消息盒子中的信息
 
 void show_message(data_t data_buf,int conn_fd);//类实时聊天记录
+
+void show_group_message(data_t data_buf,int conn_fd); //群类实时聊天记录
 
 void online_remind(online_list_t list,char *username,char *string);
 

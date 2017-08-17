@@ -18,7 +18,9 @@ void group_add(int conn_fd);
 void show_group_member(int conn_fd);
 
 //群内聊天
+void *show_group_message(void *arg);
 void chat_in_group(int conn_fd);
+void chat_in_group_assist(char *groupname,int conn_fd);
 
 //获取群历史消息
 void get_group_histroy(int conn_fd);

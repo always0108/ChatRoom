@@ -66,7 +66,7 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
             break;
         }
     }
-    wirte_in_histroy(data_buf);
+    //wirte_in_histroy(data_buf);
     if(flag == 0)
     {
         send_offline_message(data_buf,conn_fd);
@@ -76,7 +76,10 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
 void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
 {
     //无论在线与否都写入消息记录
-    wirte_in_histroy(data_buf);
+    if(wirte_in_histroy(data_buf)==-1)
+    {
+        send_note(conn_fd,"\n该用户不存在,请退出");
+    }
 }
 //发送离线消息
 void send_offline_message(data_t data_buf,int conn_fd)
@@ -91,7 +94,6 @@ void send_offline_message(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.name_to);
     strcat(preserve,"/offlinedata/offlinenote");
 
-    printf("%s\n",preserve);
 
     FILE *fp;
     fp = fopen(preserve,"a");
@@ -112,8 +114,6 @@ void check_offline_message(char *username,int conn_fd)
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/offlinenote");
 
-    printf("%s\n",preserve);
-
     FILE *fp;
     fp = fopen(preserve,"r");
     if(NULL==fp)
@@ -129,8 +129,6 @@ void check_offline_message(char *username,int conn_fd)
     strcpy(preserve,"./USER.dat/");
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/filelist");
-
-    printf("%s\n",preserve);
 
     fp = fopen(preserve,"r");
     if(NULL==fp)
@@ -153,15 +151,10 @@ void read_offline_message(char *username,int conn_fd)
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/offlinenote");
 
-    printf("%s\n",preserve);
-
     char pretemp[256];
     strcpy(pretemp,preserve);
     strcat(pretemp,"temp");
     
-    printf("%s\n",preserve);
-    printf("%s\n",pretemp);
-
     rename(preserve,pretemp);
 
     FILE *fp,*fpsave;
@@ -281,8 +274,6 @@ void see_icould_file(data_t data_buf,int conn_fd)
     strcpy(preserve,"./USER.dat/");
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/icould/");
-    
-    //printf("%s\n",preserve);
 
     if((dp = opendir(preserve) )== NULL)
     {
@@ -380,9 +371,7 @@ void send_online_file(online_list_t list,data_t data_buf,int conn_fd)
             break;
         }
     }
-    if(flag)
-        ;
-    else
+    if(!flag)
         send_note(conn_fd,"send fail");
 
 }
@@ -436,7 +425,6 @@ void send_offline_file(data_t data_buf)
     }    
     strcat(preserve,data_buf.filename+l);
     
-    printf("%s\n",preserve);
 
     fp = fopen(preserve,"ab+");
 
@@ -469,7 +457,6 @@ void send_offline_file_assist(data_t data_buf)
             break;
     } 
     
-    printf("%s\n",preserve);
     fp = fopen(preserve,"a+");
     if(NULL==fp)
     {
@@ -490,7 +477,6 @@ void read_offline_file_sender(char *username,int conn_fd)
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/filelist");
 
-    printf("%s\n",preserve);
 
     FILE *fp;
     fp = fopen(preserve,"r");
@@ -519,8 +505,6 @@ void download_offline_file(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/offlinedata/offlinefile/");
     strcat(preserve,data_buf.filename);
-    
-    printf("%s\n",preserve);
     
     FILE *fp;
     fp = fopen(preserve,"rb");
@@ -551,7 +535,6 @@ void see_offline_file(data_t data_buf,int conn_fd)
     strcpy(preserve,"./USER.dat/");
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/offlinedata/offlinefile");
-    //printf("%s\n",preserve);
 
     if((dp = opendir(preserve) )== NULL)
     {
@@ -585,8 +568,6 @@ void remove_useless_file(char *username)
     strcpy(preserve,"./USER.dat/");
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/filelist");
-
-    printf("%s\n",preserve);
     
     remove(preserve);
 
@@ -948,17 +929,11 @@ int wirte_in_histroy(data_t data_buf)
     strcat(preserve,"/notehistroy/");
     strcat(preserve,data_buf.user.username);
 
-    /*printf("%s\n",histroy.name);
-    printf("%s\n",histroy.content);
-    printf("%4d %2d %2d\n",histroy.date.year,histroy.date.month,histroy.date.day);
-    printf("%4d %2d %2d\n",histroy.time.hour,histroy.time.minute,histroy.time.second);
-    printf("%s\n",preserve);*/
-
     FILE *fp;
     fp = fopen(preserve,"a+");
     if(NULL == fp)
     {
-        my_err("open file fail",__LINE__);
+        printf("open fail \n");
         return -1;
     }else
     {
@@ -979,7 +954,7 @@ int wirte_in_histroy(data_t data_buf)
     fp = fopen(preserve,"a+");
     if(NULL == fp)
     {
-        my_err("open file fail",__LINE__);
+        printf("open file fail\n");
         return -1;
     }else
     {
@@ -1137,8 +1112,14 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
     strcpy(preserve,"./GROUP.dat/");
     strcat(preserve,data_buf.group.name);
     strcat(preserve,"list");
-
     FILE *fp;
+    fp = fopen(preserve,"r");
+    if(fp==NULL)
+    {
+        send_note(conn_fd,"该群不存在,请按quit退出");
+        return ;
+    }
+    fclose(fp);
     fp = fopen(preserve,"a+");
     if(NULL==fp)
     {
@@ -1158,11 +1139,8 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
             if(strcmp(pos->data.username,data_buf.name_to)==0)
             {   
                 data_buf.type=0;   
-                send_note(pos->data.conn_fd,"\n\t\t\t有新的消息！\n");
-                if(send(pos->data.conn_fd,&data_buf,sizeof(data_t),0) < 0){
-                    send_note(conn_fd,"send fail");
-                    my_err("send",__LINE__);
-                }
+                send_note(pos->data.conn_fd,"\n\t\t\t有新的群消息！\n");
+                save_in_newscenter(data_buf);//存到消息盒子
                 flag = 1;
                 break;
             }
@@ -1172,11 +1150,29 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
             }
     }
     //写入群聊天记录
-    write_group_histroy(data_buf);
+    //write_group_histroy(data_buf);
 }
 
+//循环聊天
+void chat_in_group_assist(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(fp==NULL)
+    {
+        send_note(conn_fd,"该群不存在,请按quit退出");
+        return ;
+    }else{
+        write_group_histroy(data_buf);
+    }
+}
 //群聊天记录
-void write_group_histroy(data_t data_buf)
+void  write_group_histroy(data_t data_buf)
 {
     histroy_t histroy;
     strcpy(histroy.name,data_buf.user.username);
@@ -1208,7 +1204,6 @@ void get_group_histroy(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.group.name);
     strcat(preserve,"histroy");
     
-    printf("%s\n",preserve);
     
     FILE *fp;
     fp = fopen(preserve,"r");
@@ -1231,6 +1226,60 @@ void get_group_histroy(data_t data_buf,int conn_fd)
     return ;
 }
 
+
+void show_group_message(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"histroy");
+    
+    
+    FILE *fp;
+    fp = fopen(preserve,"r");
+    if(NULL==fp)
+    {
+        send_note(conn_fd,"\n该群不存在，请按quit退出");
+        printf("open file fail\n");
+        return ;
+    }
+    int i=0;
+    while(!feof(fp))
+    {
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+            i++;
+    }
+    
+    if(i<6)
+    {
+        rewind(fp);
+        while(!feof(fp)){
+            if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+            {
+                if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                    send_note(conn_fd,"send fail");
+        		    my_err("send",__LINE__);
+                }
+            }
+        }
+        fclose(fp);
+        return ;
+    }
+
+    fseek(fp,-(sizeof(histroy_t)*6),SEEK_END);
+    while(!feof(fp)){
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+        {
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+                my_err("send",__LINE__);
+            }
+        }
+    }
+    fclose(fp);
+    return ;
+}
+
 //列出我的群
 void get_my_group(data_t data_buf,int conn_fd)
 {
@@ -1239,8 +1288,6 @@ void get_my_group(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/grouplist");
     
-    printf("%s\n",preserve);
-
     FILE *fp;
     fp=fopen(preserve,"r");
     while(!feof(fp))
@@ -1255,7 +1302,6 @@ void get_my_group(data_t data_buf,int conn_fd)
     fclose(fp);
 }
 
-
 //将消息存到消息中心
 void save_in_newscenter(data_t data_buf)
 {
@@ -1265,8 +1311,6 @@ void save_in_newscenter(data_t data_buf)
     strcpy(preserve,"./USER.dat/");
     strcat(preserve,data_buf.name_to);
     strcat(preserve,"/newslist");
-    
-    printf("%s\n",preserve);
     
     fp = fopen(preserve,"a+");
     if(NULL==fp)
@@ -1279,7 +1323,6 @@ void save_in_newscenter(data_t data_buf)
     fwrite(&data_buf,sizeof(data_t),1,fp);
     fclose(fp);
 }
-
 
 //读取一条未读消息
 void read_unread_message(char *username,int conn_fd)
@@ -1294,9 +1337,6 @@ void read_unread_message(char *username,int conn_fd)
     strcpy(pretemp,preserve);
     strcat(pretemp,"temp");
     
-    printf("%s\n",preserve);
-    printf("%s\n",pretemp);
-
     rename(preserve,pretemp);
 
     FILE *fp,*fpsave;
@@ -1335,6 +1375,7 @@ void read_unread_message(char *username,int conn_fd)
     remove(pretemp);
 }
 
+
 void show_message(data_t data_buf,int conn_fd)
 {
     char preserve[256];
@@ -1342,8 +1383,6 @@ void show_message(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/notehistroy/");
     strcat(preserve,data_buf.name_to);
-
-    printf("%s\n",preserve);
     
     FILE *fp;
     fp = fopen(preserve,"r");

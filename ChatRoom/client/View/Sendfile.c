@@ -99,24 +99,26 @@ void recive_online_file(data_t data_buf)
     FILE *fp;
 	char filename[256];
 	memset(filename,0,sizeof(filename));
-	int l=strlen(data_buf.name_to);
+	int l=strlen(data_buf.filename);
 	int i,flag=0;
+	
 	for(i=0;i<l;i++)
 	{
-		if(data_buf.name_to[i]=='/')
+		if(data_buf.filename[i]=='/')
 		{
 			flag=1;
 			break;
 		}
 	}
+	printf("%d\n",l);
 	if(flag)
 	{
 		while(data_buf.filename[l-1]!='/')
 			l--;
 		strcpy(filename,data_buf.filename+l);
-	}
-	strcpy(filename,data_buf.filename);
-	
+	}else
+		strcpy(filename,data_buf.filename);
+	printf("%s\n",filename);
 	fp = fopen(filename,"ab+");
     if(NULL == fp)  
     {  

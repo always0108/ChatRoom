@@ -67,9 +67,10 @@ void *thread(void *arg)
         if((ret = recv(conn_fd,&data_buf,sizeof(data_t),0))<0){
             my_err("recv",__LINE__);
         }else if(ret == 0){
+            //online_remind(list,gl_CurUser.username,"下线了");
             printf("%d退出连接\n",conn_fd);            
-		    close(conn_fd);
-            online_remind(list,gl_CurUser.username,"下线了");
+	    close(conn_fd);
+            
             online_node_t *pos;
             if(listcount>0)
                 List_ForEach(list,pos)
@@ -187,6 +188,12 @@ void *thread(void *arg)
             case 32:
                     show_message(data_buf,conn_fd);
                     break;
+            case 33:
+                   chat_in_group_assist(data_buf,conn_fd);
+                   break;
+            case 34:
+                   show_group_message(data_buf,conn_fd);
+                   break;
             }
         }   
     }

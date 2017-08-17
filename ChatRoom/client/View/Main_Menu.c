@@ -118,6 +118,7 @@ void *Main_Menu_accept(void)
 					break;
 				case 13:
 				case 29:
+				case 34:
 					printf("\n\t\t\t%s\t",data_buf.histroy.name);
 					printf("%4d-%02d-%02d\t",data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day);
 					printf("%02d:%02d:%02d\n",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
@@ -141,19 +142,22 @@ void *Main_Menu_accept(void)
 				case 32:
 					if(strcmp(data_buf.histroy.name,"我")==0)
 					{
-						
-						printf("\n\t\t\t\t\t%4d-%02d-%02d\t",data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day);
-						printf("%02d:%02d:%02d\t",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
-						printf("%s\n",data_buf.histroy.name);
-						printf("\t\t\t\t\t%s\n\n",data_buf.histroy.content);
-
+						printf("\033[34m\n----[%s]\t",data_buf.histroy.name);
+						printf("%4d-%02d-%02d\t",data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day);
+						printf("%02d:%02d:%02d\n",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
+						printf("%s\033[0m\n\n",data_buf.histroy.content);
 
 					}else{
-						printf("\n%s\t",data_buf.histroy.name);
+						printf("\n----[%s]\t",data_buf.histroy.name);
 						printf("%4d-%02d-%02d\t",data_buf.histroy.date.year,data_buf.histroy.date.month,data_buf.histroy.date.day);
 						printf("%02d:%02d:%02d\n",data_buf.histroy.time.hour,data_buf.histroy.time.minute,data_buf.histroy.time.second);
 						printf("%s\n\n",data_buf.histroy.content);
 					}
+					break;
+				case 28:
+					printf("\n\t\t\t%s有新消息\n",data_buf.group.name);
+					printf("\n\t\t\t是否查看(y or n):");
+					printf("按回车来处理\n");
 					break;
 			}
         }   

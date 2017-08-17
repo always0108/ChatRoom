@@ -46,8 +46,9 @@ void *show_chat_message(void *arg)
 {
 	struct s_info *ts = (struct s_info*)arg;
 	int conn_fd=ts->conn_fd;
+	
 	/*线程资源回收*/
-	pthread_detach(pthread_self());
+    pthread_detach(pthread_self());
 	
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
@@ -61,10 +62,13 @@ void *show_chat_message(void *arg)
 		if(flag==1)
 			break;
 		system("clear");
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
+		printf("\t\t\t==================================================================\n");
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		sleep(10);
+		sleep(6);
 	}
 	pthread_exit(0);
 }
@@ -72,7 +76,6 @@ void *show_chat_message(void *arg)
 //私聊辅助
 void send_privacy_assist(int conn_fd ,char *name)
 {
-	flag=0;
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
@@ -85,8 +88,8 @@ void send_privacy_assist(int conn_fd ,char *name)
 	strcpy(ts.name,data_buf.name_to);
 	ts.conn_fd=conn_fd;
 	pthread_create(&thid,NULL,show_chat_message,(void *)&ts);
+	flag=0;
 	while(1){
-		//printf("\n请输入要发送的内容：");
 		fgets(data_buf.temp_buf,BUFSIZE,stdin);
 		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
 		if(strcmp(data_buf.temp_buf,"quit")==0)
@@ -94,8 +97,6 @@ void send_privacy_assist(int conn_fd ,char *name)
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		usleep(1000);
-		printf("send sucess\n");
 	}
 	flag=1;
 	getchar();
@@ -113,13 +114,9 @@ void send_privacy(int conn_fd)
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
 	data_buf.type=4;
 	system("clear");
-	printf("\n请输入要发送的内容：");
-	fgets(data_buf.temp_buf,BUFSIZE,stdin);
-	data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 	}
-	printf("send sucess\n");
 	send_privacy_assist(conn_fd ,data_buf.name_to);
 }
 

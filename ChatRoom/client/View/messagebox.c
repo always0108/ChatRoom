@@ -15,6 +15,7 @@
 #include"Offlinecenter.h"
 #include"../Common/conio.h"
 #include"chat.h"
+#include"Group.h"
 #include"Sendfile.h"
 
 extern account_t gl_CurUser;
@@ -68,6 +69,9 @@ void messagebox_Menu(int conn_fd)
 					{
 						printf("\n\t\t\t开始接收......\n");
 						recive_online_file_assist(data_recv,conn_fd);
+					}else if(data_recv.type == 28)
+					{
+						chat_in_group_assist(data_recv.group.name,conn_fd);
 					}
 					PAUSE
 					memset(&data_recv,0,sizeof(data_t));
