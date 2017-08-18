@@ -112,7 +112,7 @@ int SysLogin(int connfd)
                 break;
             case '2':
 				Account_UI_Add();
-				getchar();
+				//getchar();
 				break;
         }
     choice = getche();
@@ -159,10 +159,10 @@ int Account_UI_Add() {
 		printf("\n\t\t\t请再次输入上面的密码:");
 		GetPassword(passwd);
 	}
-	printf("\n\t\t\t请输入用户类型(0表示普通用户，1表示vip)：");
-	int temp;
-	scanf("%d",&temp);
-	data_buf.user.type=temp;
+	//printf("\n\t\t\t请输入用户类型(0表示普通用户，1表示vip)：");
+	//int temp;
+	//scanf("%d",&temp);
+	data_buf.user.type=0;
 	data_buf.type=2;
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
         my_err("send",__LINE__);

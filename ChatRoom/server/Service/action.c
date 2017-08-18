@@ -73,6 +73,7 @@ void send_privacy(online_list_t list,data_t data_buf,int conn_fd)
     }
 }
 
+//将消息写入文件
 void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
 {
     //无论在线与否都写入消息记录
@@ -81,6 +82,7 @@ void send_privacy_assist(online_list_t list,data_t data_buf,int conn_fd)
         send_note(conn_fd,"\n该用户不存在,请退出");
     }
 }
+
 //发送离线消息
 void send_offline_message(data_t data_buf,int conn_fd)
 {
@@ -241,7 +243,7 @@ void upload_file(data_t data_buf)
     if(NULL == fp)  
     {  
         printf("File:\t%s Can Not Open To Write\n",data_buf.filename);  
-        exit(1);  
+        return ;
     }
     else{
         l=strlen(data_buf.temp_buf);
@@ -669,7 +671,7 @@ void add_friend(online_list_t list,data_t data_buf,int conn_fd)
             }
         }
     if(!flag)
-        send_note(conn_fd,"\n\t\t\t对方已下线,请稍候\n");   
+        send_offline_message(data_buf,conn_fd);  
 }
 
 //查看好友列表
@@ -1134,7 +1136,7 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
     fp = fopen(preserve,"r");
     if(fp==NULL)
     {
-        send_note(conn_fd,"该群不存在,请按quit退出");
+        send_note(conn_fd,"该群不存在，请按quit退出");
         return ;
     }
 
@@ -1185,7 +1187,7 @@ void chat_in_group_assist(data_t data_buf,int conn_fd)
     
     if(fp==NULL)
     {
-        send_note(conn_fd,"该群不存在,请按quit退出");
+        send_note(conn_fd,"该群不存在，请按quit退出");
         return ;
     }else{
         write_group_histroy(data_buf);
@@ -1260,7 +1262,7 @@ void show_group_message(data_t data_buf,int conn_fd)
     fp = fopen(preserve,"r");
     if(NULL==fp)
     {
-        send_note(conn_fd,"\n该群不存在，请按quit退出");
+        //send_note(conn_fd,"\n该群不存在，请按quit退出");
         printf("open file fail\n");
         return ;
     }

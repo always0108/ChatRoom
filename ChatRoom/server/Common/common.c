@@ -16,7 +16,6 @@ void my_err(const char * err_string,int line)
 {
     fprintf(stderr,"line:%d",line);
     perror(err_string);
-    exit(1);
 }
 //发送消息
 void send_note(int conn_fd,const char *string)

@@ -118,11 +118,22 @@ void group_add(int conn_fd)
 		printf("请输入你要添加人的名称:");
 		fgets(data_buf.temp_buf,BUFSIZE,stdin);
 		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+		if(strlen(data_buf.temp_buf)==0)
+		{
+			printf("输入不能为空\n");
+			continue;
+		}
 		if(strcmp(data_buf.temp_buf,"quit")==0)
 			break;
 		printf("请输入他的权限(1普通用户2管理员)：");
 		scanf("%d",&data_buf.group.type);
 		getchar();
+		while(data_buf.group.type!=2 && data_buf.group.type!=1)
+		{
+			printf("请输入他的权限(1普通用户2管理员)：");
+			scanf("%d",&data_buf.group.type);
+			getchar();
+		}
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
@@ -130,6 +141,7 @@ void group_add(int conn_fd)
 	}
 	getchar();
 }
+
 
 //列出群成员
 void show_group_member(int conn_fd)
