@@ -1323,6 +1323,105 @@ void get_my_group(data_t data_buf,int conn_fd)
     fclose(fp);
 }
 
+//退群
+void exit_group(data_t data_buf,int conn_fd)
+{
+    char preserve[256];
+    char temp[256];
+    int flag = 0;
+    
+    //从用户的群列表删除该群
+    strcpy(preserve,"./USER.dat/");
+    strcat(preserve,data_buf.user.username);
+    strcat(preserve,"/grouplist");
+
+    strcpy(temp,preserve);
+    strcpy(temp,"temp");
+    
+    if(rename(preserve,temp)<0)
+    {
+        send_note(conn_fd,"remove fail");
+        printf("open fail fail");
+        return ;
+    }
+
+    FILE *fpSour, *fpTarg;
+	fpSour = fopen(temp, "r");
+	if (NULL == fpSour) {
+		printf("Cannot open file %s!\n", temp);
+		return ;
+	}
+
+	fpTarg = fopen(preserve, "w");
+	if (NULL == fpTarg) {
+		printf("Cannot open file %s!\n", preserve);
+		return ;
+    }
+    
+	while (!feof(fpSour)) {
+		if (fscanf(fpSour,"%s\n",data_buf.temp_buf)) {
+			if (strcmp(data_buf.temp_buf,data_buf.group.name)==0) {
+                printf("get\n");
+				 //找到要删除的用户就跳过
+				continue;
+            }
+            fprintf(fpTarg,"%s\n",data_buf.temp_buf);
+		}
+	}
+	fclose(fpTarg);
+	fclose(fpSour);
+	//删除临时文件
+    remove(temp);
+
+    //从群列表删除该成员
+    strcpy(preserve,"./GROUP.dat/");
+    strcat(preserve,data_buf.group.name);
+    strcat(preserve,"list");
+
+    strcpy(temp,preserve);
+    strcpy(temp,"temp");
+    
+    if(rename(preserve,temp)<0)
+    {
+        send_note(conn_fd,"该群不存在");
+        //printf("open fail fail");
+        return ;
+    }
+    
+	fpSour = fopen(temp, "r");
+	if (NULL == fpSour) {
+		printf("Cannot open file %s!\n", temp);
+		return ;
+	}
+
+	fpTarg = fopen(preserve, "w");
+	if (NULL == fpTarg) {
+		printf("Cannot open file %s!\n", preserve);
+		return ;
+    }
+    char name[30];
+    int type;
+	while (!feof(fpSour)) {
+		if (fscanf(fpSour,"%30s\t%d\n",name,&type)) {
+			if (strcmp(name,data_buf.user.username)==0) {
+                flag = 1;
+                printf("get\n");
+				 //找到要删除的用户就跳过
+				continue;
+            }
+            fprintf(fpTarg,"%30s\t%d\n",name,type);
+		}
+	}
+	fclose(fpTarg);
+	fclose(fpSour);
+	//删除临时文件
+    remove(temp);
+    if(flag)
+        send_note(conn_fd,"退群成功");
+    else
+        send_note(conn_fd,"你不在该群");
+}
+
 //将消息存到消息中心
 void save_in_newscenter(data_t data_buf)
 {

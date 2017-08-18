@@ -193,6 +193,9 @@ void *thread(void *arg)
             case 34:
                    show_group_message(data_buf,conn_fd);
                    break;
+            case 35:
+                   exit_group(data_buf,conn_fd);
+                   break;
             }
         }   
     }

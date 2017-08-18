@@ -48,6 +48,7 @@ void Group_Menu(int conn_fd)
 		printf("\t\t\t\t=>\t[4]群内聊天\n");
 		printf("\t\t\t\t=>\t[5]群消息记录\n");
 		printf("\t\t\t\t=>\t[6]我的群\n");
+		printf("\t\t\t\t=>\t[7]退出群\n");
 		printf("\t\t\t\t=>\t[R]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
@@ -71,6 +72,9 @@ void Group_Menu(int conn_fd)
 					break;
 			case '6':
 					get_my_group(conn_fd);
+					break;
+			case '7':
+					exit_group(conn_fd);
 					break;
 		}
 	}while ('r' != choice);
@@ -174,7 +178,7 @@ void *show_group_message(void *arg)
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		sleep(6);
+		sleep(5);
 	}
 	pthread_exit(0);
 }
@@ -196,20 +200,6 @@ void chat_in_group(int conn_fd)
 	chat_in_group_assist(data_buf.group.name,conn_fd);
 }
 
-void reply_group_message(char *groupname,int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	
-	strcpy(data_buf.group.name,groupname);
-	data_buf.type=28;
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-		my_err("send",__LINE__);
-	}
-	chat_in_group_assist(data_buf.group.name,conn_fd);
-}
 
 void chat_in_group_assist(char *groupname,int conn_fd)
 {
@@ -231,8 +221,9 @@ void chat_in_group_assist(char *groupname,int conn_fd)
 		{
 			fgets(data_buf.temp_buf,BUFSIZE,stdin);
 			data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-			if(strlen(data_buf.temp_buf)>0)
+			if(strlen(data_buf.temp_buf)>0){
 				break;
+			}	
 			else
 				printf("输入不能为空\n");
 		}
@@ -241,14 +232,19 @@ void chat_in_group_assist(char *groupname,int conn_fd)
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
+		data_buf.type=34;
+		system("clear");
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
+		printf("\t\t\t==================================================================\n");
+		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+		}
+		data_buf.type=33;
 	}
-	flag = 1 ;
-	pthread_cancel(thid);
+	flag = 1;
 	getchar();
 }
-
-
-
 
 //获取群历史消息
 void get_group_histroy(int conn_fd)
@@ -269,6 +265,24 @@ void get_group_histroy(int conn_fd)
 	
 
 }
+
+void exit_group(int conn_fd)
+{
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	data_buf.type=35;
+	printf("\n\t\t\t请输入要退出的群名:");
+	fgets(data_buf.group.name,BUFSIZE,stdin);
+	data_buf.group.name[strlen(data_buf.group.name)-1]='\0';
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+		my_err("send",__LINE__);
+	}
+	getchar();
+
+}
+
 
 //获得有我在的所有群名
 void get_my_group(int conn_fd)

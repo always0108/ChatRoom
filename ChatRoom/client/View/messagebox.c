@@ -62,14 +62,14 @@ void messagebox_Menu(int conn_fd)
 						chat_to(data_recv,conn_fd,"\n对方已接受你的好友请求\n");
 						printf("\n\t\t\t你们已经成为了好友\n");
 					}else if(data_recv.type == 4){
-						reply_one_message(data_recv.user.username,conn_fd);
+						send_privacy_assist(conn_fd ,data_recv.user.username);
 					}else if(data_recv.type == 16)
 					{
 						printf("\n\t\t\t开始接收......\n");
 						recive_online_file_assist(data_recv,conn_fd);
 					}else if(data_recv.type == 28)
 					{
-						reply_group_message(data_recv.group.name,conn_fd);
+						chat_in_group_assist(data_recv.group.name,conn_fd);
 					}
 					PAUSE
 					memset(&data_recv,0,sizeof(data_t));

@@ -29,6 +29,9 @@ void get_group_histroy(int conn_fd);
 //获得有我在的所有群名
 void get_my_group(int conn_fd);
 
+//退群
+void exit_group(int conn_fd);
+
 void Group_Menu(int conn_fd);
 
 #endif

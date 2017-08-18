@@ -94,8 +94,9 @@ void send_privacy_assist(int conn_fd ,char *name)
 		{
 			fgets(data_buf.temp_buf,BUFSIZE,stdin);
 			data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
-			if(strlen(data_buf.temp_buf)>0)
+			if(strlen(data_buf.temp_buf)>0){
 				break;
+			}	
 			else
 				printf("输入不能为空\n");
 		}
@@ -104,10 +105,21 @@ void send_privacy_assist(int conn_fd ,char *name)
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
+		data_buf.type=32;
+		system("clear");
+		printf("\t\t\t==================================================================\n");
+		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
+		printf("\t\t\t==================================================================\n");
+		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+		}
+		data_buf.type=15;
 	}
 	flag=1;
 	getchar();
 }
+
+
 
 //私聊
 void send_privacy(int conn_fd)
@@ -126,22 +138,6 @@ void send_privacy(int conn_fd)
 	}
 	send_privacy_assist(conn_fd ,data_buf.name_to);
 }
-
-void reply_one_message(char *username,int conn_fd)
-{
-	data_t data_buf;
-	memset(&data_buf,0,sizeof(data_t));
-	strcpy(data_buf.user.username,gl_CurUser.username);
-	data_buf.user.username[strlen(data_buf.user.username)]='\0';
-	strcpy(data_buf.name_to,username);
-	data_buf.type=4;
-	system("clear");
-	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-	}
-	send_privacy_assist(conn_fd ,data_buf.name_to);
-}
-
 
 //接收向发送者回馈结果
 void chat_to(data_t data_temp,int conn_fd,char *string)

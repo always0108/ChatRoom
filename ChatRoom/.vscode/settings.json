@@ -5,6 +5,7 @@
         "stdlib.h": "c",
         "common.h": "c",
         "main_menu.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "type_traits": "c"
     }
 }
