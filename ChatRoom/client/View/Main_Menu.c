@@ -89,8 +89,8 @@ void *Main_Menu_accept(void)
 						break;   
 				case 8:
 						printf("\n\t\t\t%s请求加好友\n",data_buf.user.username);
-						printf("\n\t\t\t是否接受(y or n):");
-						printf("按回车来处理\n");
+						printf("\n\t\t\t是否接受(y or n):\n");
+						printf("\t\t\t先按回车来进行处理\n");
 						break;
 				case 9:
 				case 24:
@@ -155,9 +155,9 @@ void *Main_Menu_accept(void)
 					}
 					break;
 				case 28:
-					printf("\n\t\t\t%s有新消息\n",data_buf.group.name);
-					printf("\n\t\t\t是否查看(y or n):");
-					printf("按回车来处理\n");
+					printf("\n\t\t\t%s有新的群消息\n",data_buf.group.name);
+					printf("\n\t\t\t是否查看(y or n):\n");
+					printf("\t\t\t先按回车来进行处理\n");
 					break;
 			}
         }   

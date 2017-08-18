@@ -16,6 +16,7 @@ void send_all(int conn_fd);
 //私聊
 void send_privacy(int conn_fd);
 void send_privacy_assist(int conn_fd ,char *name);
+void reply_one_message(char *username,int conn_fd);
 
 //接收者给发送者消息提示
 void chat_to(data_t data_temp,int conn_fd,char *string);

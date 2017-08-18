@@ -90,8 +90,15 @@ void send_privacy_assist(int conn_fd ,char *name)
 	pthread_create(&thid,NULL,show_chat_message,(void *)&ts);
 	flag=0;
 	while(1){
-		fgets(data_buf.temp_buf,BUFSIZE,stdin);
-		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+		while(1)
+		{
+			fgets(data_buf.temp_buf,BUFSIZE,stdin);
+			data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+			if(strlen(data_buf.temp_buf)>0)
+				break;
+			else
+				printf("输入不能为空\n");
+		}
 		if(strcmp(data_buf.temp_buf,"quit")==0)
 			break;
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
@@ -112,6 +119,21 @@ void send_privacy(int conn_fd)
 	printf("\n\t\t\t请输入你要私聊人名字：");
 	fgets(data_buf.name_to,30,stdin);
 	data_buf.name_to[strlen(data_buf.name_to)-1]='\0';
+	data_buf.type=4;
+	system("clear");
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+			my_err("send",__LINE__);
+	}
+	send_privacy_assist(conn_fd ,data_buf.name_to);
+}
+
+void reply_one_message(char *username,int conn_fd)
+{
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	strcpy(data_buf.name_to,username);
 	data_buf.type=4;
 	system("clear");
 	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){

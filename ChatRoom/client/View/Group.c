@@ -48,7 +48,7 @@ void Group_Menu(int conn_fd)
 		printf("\t\t\t\t=>\t[4]群内聊天\n");
 		printf("\t\t\t\t=>\t[5]群消息记录\n");
 		printf("\t\t\t\t=>\t[6]我的群\n");
-		printf("\t\t\t\t=>\t[q]退出\n");
+		printf("\t\t\t\t=>\t[R]退出\n");
 		printf("\n\t\t\t==================================================================\n");
 		printf("\t\t\t请输入你的选择:");
 		choice = getche();
@@ -73,7 +73,7 @@ void Group_Menu(int conn_fd)
 					get_my_group(conn_fd);
 					break;
 		}
-	}while ('q' != choice);
+	}while ('r' != choice);
 }
 
 
@@ -196,6 +196,21 @@ void chat_in_group(int conn_fd)
 	chat_in_group_assist(data_buf.group.name,conn_fd);
 }
 
+void reply_group_message(char *groupname,int conn_fd)
+{
+	data_t data_buf;
+	memset(&data_buf,0,sizeof(data_t));
+	strcpy(data_buf.user.username,gl_CurUser.username);
+	data_buf.user.username[strlen(data_buf.user.username)]='\0';
+	
+	strcpy(data_buf.group.name,groupname);
+	data_buf.type=28;
+	if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+		my_err("send",__LINE__);
+	}
+	chat_in_group_assist(data_buf.group.name,conn_fd);
+}
+
 void chat_in_group_assist(char *groupname,int conn_fd)
 {
 	data_t data_buf;
@@ -212,9 +227,15 @@ void chat_in_group_assist(char *groupname,int conn_fd)
 	pthread_create(&thid,NULL,show_group_message,(void *)&ts);
 	flag = 0;
 	while(1){
-		//printf("\n请输入要发送的内容：");
-		fgets(data_buf.temp_buf,BUFSIZE,stdin);
-		data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+		while(1)
+		{
+			fgets(data_buf.temp_buf,BUFSIZE,stdin);
+			data_buf.temp_buf[strlen(data_buf.temp_buf)-1]='\0';
+			if(strlen(data_buf.temp_buf)>0)
+				break;
+			else
+				printf("输入不能为空\n");
+		}
 		if(strcmp(data_buf.temp_buf,"quit")==0)
 			break;
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){

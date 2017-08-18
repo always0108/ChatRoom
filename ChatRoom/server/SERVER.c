@@ -70,7 +70,6 @@ void *thread(void *arg)
             //online_remind(list,gl_CurUser.username,"下线了");
             printf("%d退出连接\n",conn_fd);            
 	    close(conn_fd);
-            
             online_node_t *pos;
             if(listcount>0)
                 List_ForEach(list,pos)
@@ -373,8 +372,7 @@ int main(void)
         mkdir("USER.dat",0777);
     if(NULL==opendir("GROUP.dat"))
         mkdir("GROUP.dat",0777);
-
-	List_Init(list, online_node_t);
+    List_Init(list, online_node_t);
     int sock_fd=ready();
     accept_in(sock_fd);
     return 0;

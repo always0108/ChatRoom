@@ -190,6 +190,8 @@ void read_offline_message(char *username,int conn_fd)
             fwrite(&data_buf,sizeof(data_t),1,fpsave);
         }
     }
+    fclose(fp);
+    fclose(fpsave);
     remove(pretemp);
 }
 
@@ -261,8 +263,12 @@ int check_file(char *filename,char *dirname)
 
     while((ptr = readdir(dp)) != NULL){
         if(strcmp(ptr->d_name,filename)==0)    
+        {
+            closedir(dp);
             return 1;
+        }    
     }
+    closedir(dp);
     return 0;
 }        
 
@@ -298,7 +304,7 @@ void see_icould_file(data_t data_buf,int conn_fd)
     if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
         my_err("send",__LINE__);
     }
-
+    closedir(dp);
 }
 
 //删除云端文件
@@ -496,6 +502,7 @@ void read_offline_file_sender(char *username,int conn_fd)
             }
         }
     }
+    fclose(fp);
 }
 
 void download_offline_file(data_t data_buf,int conn_fd)
@@ -559,7 +566,7 @@ void see_offline_file(data_t data_buf,int conn_fd)
     if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
         my_err("send",__LINE__);
     }
-    
+    closedir(dp);
 }
 
 void remove_useless_file(char *username)
@@ -575,6 +582,9 @@ void remove_useless_file(char *username)
     strcat(preserve,username);
     strcat(preserve,"/offlinedata/offlinenote");
 
+    remove(preserve);
+
+    strcat(preserve,"temp");
     remove(preserve);
 
     strcpy(preserve,"./USER.dat/");
@@ -599,6 +609,7 @@ void remove_useless_file(char *username)
         }
     }
     chdir("../../../../");
+    closedir(dp);
 }
 
 
@@ -691,6 +702,7 @@ void get_friendlist(data_t data_buf,int conn_fd)
     if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){     
         my_err("send",__LINE__);
     }
+    fclose(fp);
 }
 
 
@@ -748,12 +760,13 @@ int check_friendlist(char *username,char *name_to)
         {
             if(strcmp(test,name_to)==0)
             {
+                fclose(fp);
                 return 1;
             }
         }
     }
+    fclose(fp);
     return 0;
-
 }
 
 //删除好友   双向删除
@@ -906,11 +919,13 @@ int check_name(char *name)
                 user.username[strlen(user.username)]='\0';
                 if(strcmp(user.username,name)==0)
                 {
+                    fclose(fp);
                     return 1;
                 }   
             }
         }
     }
+    fclose(fp);
     return 0;
 }
 
@@ -1087,6 +1102,7 @@ void show_group_member(data_t data_buf,int conn_fd)
 
     printf("%s\n",preserve);
     FILE *fp;
+    
     fp = fopen(preserve,"r");
     if(fp==NULL)
     {
@@ -1102,6 +1118,7 @@ void show_group_member(data_t data_buf,int conn_fd)
         		my_err("send",__LINE__);
             }
         }
+        fclose(fp);
     }
 }
 
@@ -1113,12 +1130,14 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.group.name);
     strcat(preserve,"list");
     FILE *fp;
+    
     fp = fopen(preserve,"r");
     if(fp==NULL)
     {
         send_note(conn_fd,"该群不存在,请按quit退出");
         return ;
     }
+
     fclose(fp);
     fp = fopen(preserve,"a+");
     if(NULL==fp)
@@ -1138,7 +1157,6 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
         {   
             if(strcmp(pos->data.username,data_buf.name_to)==0)
             {   
-                data_buf.type=0;   
                 send_note(pos->data.conn_fd,"\n\t\t\t有新的群消息！\n");
                 save_in_newscenter(data_buf);//存到消息盒子
                 flag = 1;
@@ -1149,6 +1167,7 @@ void chat_in_group(online_list_t list,data_t data_buf,int conn_fd)
             send_offline_message(data_buf,conn_fd); 
             }
     }
+    fclose(fp);
     //写入群聊天记录
     //write_group_histroy(data_buf);
 }
@@ -1163,12 +1182,14 @@ void chat_in_group_assist(data_t data_buf,int conn_fd)
 
     FILE *fp;
     fp = fopen(preserve,"r");
+    
     if(fp==NULL)
     {
         send_note(conn_fd,"该群不存在,请按quit退出");
         return ;
     }else{
         write_group_histroy(data_buf);
+        fclose(fp);
     }
 }
 //群聊天记录
@@ -1372,6 +1393,8 @@ void read_unread_message(char *username,int conn_fd)
             fwrite(&data_buf,sizeof(data_t),1,fpsave);
         }
     }
+    fclose(fp);
+    fclose(fpsave);
     remove(pretemp);
 }
 
@@ -1429,7 +1452,7 @@ void show_message(data_t data_buf,int conn_fd)
 }
 
 
-//好友上下线提醒
+//好友上线提醒
 void online_remind(online_list_t list,char *username,char *string)
 {
     char preserve[256];
