@@ -42,7 +42,7 @@ void write_server_log(log_t log);
 
 
 //定义全局变量，用于存储登陆用户信息
-account_t gl_CurUser = { 0, 0, "Anonymous","" };
+account_t gl_CurUser = { 0, 0, "unknownuser","" };
 
 online_list_t list;
 int listcount = 0;
