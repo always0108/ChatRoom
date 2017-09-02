@@ -15,7 +15,7 @@
 #include<pthread.h>
 
 extern account_t gl_CurUser;
-
+status_t status;
 
 int flag=0;
 
@@ -61,14 +61,10 @@ void *show_chat_message(void *arg)
 	{
 		if(flag==1)
 			break;
-		system("clear");
-		printf("\t\t\t==================================================================\n");
-		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
-		printf("\t\t\t==================================================================\n");
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		sleep(6);
+		sleep(2);
 	}
 	pthread_exit(0);
 }
@@ -76,6 +72,11 @@ void *show_chat_message(void *arg)
 //私聊辅助
 void send_privacy_assist(int conn_fd ,char *name)
 {
+	//表明进入与某人的私聊界面
+	status.status=1;
+	strcpy(status.name,name);
+	status.name[strlen(status.name)]='\0';
+	
 	data_t data_buf;
 	memset(&data_buf,0,sizeof(data_t));
 	strcpy(data_buf.user.username,gl_CurUser.username);
@@ -89,7 +90,14 @@ void send_privacy_assist(int conn_fd ,char *name)
 	ts.conn_fd=conn_fd;
 	pthread_create(&thid,NULL,show_chat_message,(void *)&ts);
 	flag=0;
+	//system("clear");
+	printf("\t\t\t==================================================================\n");
+	printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
+	printf("\t\t\t==================================================================\n");
+	user_date_t date;
+	user_time_t time;
 	while(1){
+		printf("\n");
 		while(1)
 		{
 			fgets(data_buf.temp_buf,BUFSIZE,stdin);
@@ -102,20 +110,22 @@ void send_privacy_assist(int conn_fd ,char *name)
 		}
 		if(strcmp(data_buf.temp_buf,"quit")==0)
 			break;
+		date = DateNow();
+		time = TimeNow();
+		printf("\033[s");
+		printf("\033[2A");
+		printf("\033[34m----[%s]\t","我");
+		printf("%4d-%02d-%02d\t",date.year,date.month,date.day);
+		printf("%02d:%02d:%02d\n",time.hour,time.minute,time.second);
+		printf("%s\033[0m\n",data_buf.temp_buf);
+		printf("\033[u");
+		printf("\n");
 		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
 			my_err("send",__LINE__);
 		}
-		data_buf.type=32;
-		system("clear");
-		printf("\t\t\t==================================================================\n");
-		printf("\t\t\t      ****************    输入quit来结束对话   ****************         \n");
-		printf("\t\t\t==================================================================\n");
-		if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
-			my_err("send",__LINE__);
-		}
-		data_buf.type=15;
 	}
 	flag=1;
+	memset(&status,0,sizeof(status_t));
 	getchar();
 }
 

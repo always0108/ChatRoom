@@ -23,6 +23,8 @@
 extern account_t gl_CurUser;
 data_t data_recv;
 int flag_exit=0;
+extern status_t status;
+
 
 int conn_fd;
 

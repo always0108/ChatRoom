@@ -958,6 +958,22 @@ int wirte_in_histroy(data_t data_buf)
     }
     fclose(fp);
     
+    
+    //将消息写入接受者缓冲区
+    strcat(preserve,"buff");
+    fp = fopen(preserve,"a+");
+    if(NULL == fp)
+    {
+        printf("open fail \n");
+        return -1;
+    }else
+    {
+        fwrite(&histroy,sizeof(histroy_t),1,fp);
+    }
+    fclose(fp);
+    //写入完毕
+
+    
     strcpy(histroy.name,"我");
     strcpy(histroy.content,data_buf.temp_buf);
     histroy.date=DateNow();
@@ -1194,6 +1210,7 @@ void chat_in_group_assist(data_t data_buf,int conn_fd)
         fclose(fp);
     }
 }
+
 //群聊天记录
 void  write_group_histroy(data_t data_buf)
 {
@@ -1507,6 +1524,7 @@ void show_message(data_t data_buf,int conn_fd)
     strcat(preserve,data_buf.user.username);
     strcat(preserve,"/notehistroy/");
     strcat(preserve,data_buf.name_to);
+    strcat(preserve,"buff");
     
     FILE *fp;
     fp = fopen(preserve,"r");
@@ -1515,7 +1533,18 @@ void show_message(data_t data_buf,int conn_fd)
         printf("open file fail\n");
         return ;
     }
-    int i=0;
+    while(!feof(fp))
+    {
+        if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
+        {
+            if(send(conn_fd,&data_buf,sizeof(data_t),0) < 0){
+                send_note(conn_fd,"send fail");
+                my_err("send",__LINE__);
+            }
+        }
+    }
+
+    /*int i=0;
     while(!feof(fp))
     {
         if(fread(&data_buf.histroy,sizeof(histroy_t),1,fp)>0)
@@ -1547,11 +1576,13 @@ void show_message(data_t data_buf,int conn_fd)
                 my_err("send",__LINE__);
             }
         }
-    }
+    }*/
+    fclose(fp);
+    
+    fp = fopen(preserve,"w");
     fclose(fp);
     return ;
 }
-
 
 //好友上线提醒
 void online_remind(online_list_t list,char *username,char *string)

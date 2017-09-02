@@ -43,6 +43,11 @@ typedef struct{
 }group_t;
 
 typedef struct{
+	int status;
+	char name[30];
+}status_t;
+
+typedef struct{
 	int type;//要做什么
 	account_t user;
 	user_date_t date;

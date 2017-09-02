@@ -62,6 +62,7 @@ void messagebox_Menu(int conn_fd)
 						chat_to(data_recv,conn_fd,"\n对方已接受你的好友请求\n");
 						printf("\n\t\t\t你们已经成为了好友\n");
 					}else if(data_recv.type == 4){
+						system("clear");
 						send_privacy_assist(conn_fd ,data_recv.user.username);
 					}else if(data_recv.type == 16)
 					{
