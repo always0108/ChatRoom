@@ -38,7 +38,7 @@ void messagebox_Menu(int conn_fd)
 		printf("\t\t\t         **************** 消息盒子 ****************         \n");
 		printf("\t\t\t==================================================================\n");
 		printf("\t\t\t\t=>\t[1]读取一条在线消息\n");
-		printf("\t\t\t\t=>\t[2]读取离线在线消息\n");
+		printf("\t\t\t\t=>\t[2]读取一条离线消息\n");
 		printf("\t\t\t\t=>\t[y]接受\n");
 		printf("\t\t\t\t=>\t[n]拒绝\n");
 		printf("\t\t\t\t=>\t[R]返回\n");

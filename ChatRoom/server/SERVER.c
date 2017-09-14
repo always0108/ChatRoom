@@ -38,7 +38,7 @@ void sign_up(data_t data_buf,int conn_fd);//注册 2
 
 void init_user(char *username);//初始化用户文件夹
 
-void write_server_log(log_t log);
+void write_server_log(log_t log);//服务器日志
 
 
 //定义全局变量，用于存储登陆用户信息
